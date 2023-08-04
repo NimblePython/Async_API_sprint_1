@@ -16,6 +16,12 @@ pydantic = "1.9.0"
 uvicorn = "0.12.2"
 uvloop = {version = "0.17.0", markers = 'sys_platform != "win32" and implementation_name == "cpython"'}
 
+[tool.poetry.group.dev.dependencies]
+wemake-python-styleguide = "^0.18.0"
+mypy = "^1.4.1"
+autopep8 = "^2.0.2"
+flake8-pytest-style = "^1.7.2"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
