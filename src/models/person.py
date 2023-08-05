@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Модуль, где определена модель кинопроизведения."""
+"""Модуль, где определена модель данных персон."""
 from typing import List, Optional
 from uuid import UUID
 
