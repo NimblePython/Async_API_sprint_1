@@ -3,11 +3,10 @@
 from typing import List, Optional
 from uuid import UUID
 
-import orjson
-from pydantic import BaseModel
+from src.models.base_model_improved import BaseModelImproved
 
 
-class PortfolioFilm(BaseModel):
+class PortfolioFilm(BaseModelImproved):
     """Модель данных фильма в портфолио персоны."""
 
     uuid: UUID
@@ -16,7 +15,7 @@ class PortfolioFilm(BaseModel):
     # если брать аналогию с актёрами в фильмах - здесь должен быть именно title
 
 
-class Person(BaseModel):
+class Person(BaseModelImproved):
     """Модель данных персоны."""
 
     uuid: UUID
