@@ -2,12 +2,12 @@
 """Модуль, где определена модель данных жанров."""
 from uuid import UUID
 
-from pydantic import BaseModel
+from src.models.base_model_improved import BaseModelImproved
 
 
-class Genre(BaseModel):
+class Genre(BaseModelImproved):
     """Модель данных жанра кинопроизведения."""
 
-    id: UUID  # TODO: в т.з. это поле названо uuid
+    uuid: UUID
     name: str
     description: str
