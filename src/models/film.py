@@ -34,12 +34,20 @@ class Participant(BaseModel):
     name: str
 
 
+class FilmGenre(BaseModel):
+    """Схема данных жанра, к которому относится фильм."""
+
+    id: UUID
+    name: str
+
+
 class Film(BaseModel):
     """Схема данных кинопроизведения."""
 
     id: UUID
     imdb_rating: float
-    genre: str
+    genre: Optional[List[FilmGenre]]  # TODO: уточнить, т.к.
+    # в прошлом спринте у меня здесь был просто str
     title: str
     description: Optional[str]
     director: Optional[List[str]]
