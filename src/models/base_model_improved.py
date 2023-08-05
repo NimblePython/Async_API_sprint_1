@@ -23,7 +23,7 @@ def orjson_dumps(value_to_dump, *, default):
 
 
 class BaseModelImproved(BaseModel):
-    """Модель данных кинопроизведения (минимальная - для главной страницы)."""
+    """Модель данных c улучшенной работой с json."""
 
     class Config(object):
         """Класс конфигурации модели Pydantic."""
