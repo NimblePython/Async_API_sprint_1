@@ -13,7 +13,8 @@ class Participant(BaseModelImproved):
     name: str
 
 
-class FilmGenre(BaseModelImproved):  # TODO стоит ли наследовать модели от общего класса?
+# TODO стоит ли наследовать модели от общего класса типа RelatedObject?
+class FilmGenre(BaseModelImproved):
     """Модель данных жанра, к которому относится фильм."""
 
     id: UUID
