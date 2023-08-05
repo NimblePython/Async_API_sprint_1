@@ -7,12 +7,13 @@ def orjson_dumps(value_to_dump, *, default):
     """Конвертировать в передаваемое значение в json-строку.
 
     "*" - обозначает конец позиционных аргументов (PEP 3102)
-    To serialize a subclass or arbitrary types, specify default as a callable
-    that returns a supported type. specify default as a callable that returns a supported type.
+
+    Чтобы сериализовать подкласс или произвольные типы, задайте default как callable, который
+    возвращает поддерживаемый тип.
 
     Parameters:
         value_to_dump: значение, которое нужно конвертировать
-        default: default may be a function, lambda, or callable class instance
+        default: функция, lambda или экземпляр callable класса
 
 
     Returns:
