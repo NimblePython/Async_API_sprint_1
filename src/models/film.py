@@ -28,33 +28,25 @@ def orjson_dumps(value_to_dump, *, default):
 
 
 class Participant(BaseModel):
-    """Схема данных персоны, участвующей в создании фильма."""
+    """Модель данных персоны, участвующей в создании фильма."""
 
     id: UUID
     name: str
 
 
-class FilmGenre(BaseModel):
-    """Схема данных жанра, к которому относится фильм."""
+class FilmGenre(BaseModel):  # TODO стоит ли наследовать модели от общего класса?
+    """Модель данных жанра, к которому относится фильм."""
 
     id: UUID
     name: str
 
 
 class Film(BaseModel):
-    """Схема данных кинопроизведения."""
+    """Модель данных кинопроизведения (минимальная - для главной страницы)."""
 
     id: UUID
-    imdb_rating: float
-    genre: Optional[List[FilmGenre]]  # TODO: уточнить, т.к.
-    # в прошлом спринте у меня здесь был просто str
     title: str
-    description: Optional[str]
-    director: Optional[List[str]]
-    actors_names: Optional[List[str]]
-    writers_names: Optional[List[str]]
-    actors: Optional[List[Participant]]
-    writers: Optional[List[Participant]]
+    imdb_rating: float
 
     class Config(object):
         """Класс конфигурации модели Pydantic."""
@@ -62,3 +54,16 @@ class Film(BaseModel):
         # Заменяем стандартную работу с json на более быструю
         json_loads = orjson.loads
         json_dumps = orjson_dumps
+
+
+class FilmDetailed(BaseModel):
+    """Схема данных подробностей о кинопроизведении."""
+
+    genre: Optional[List[FilmGenre]]  # TODO: уточнить, т.к.
+    # в прошлом спринте у меня здесь был просто str
+    description: Optional[str]
+    director: Optional[List[str]]
+    actors_names: Optional[List[str]]
+    writers_names: Optional[List[str]]
+    actors: Optional[List[Participant]]
+    writers: Optional[List[Participant]]
