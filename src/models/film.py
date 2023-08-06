@@ -1,19 +1,41 @@
 # -*- coding: utf-8 -*-
-import orjson
+"""Модуль, где определена модель кинопроизведения."""
+from typing import List, Optional
+from uuid import UUID
 
-# Используем pydantic для упрощения работы при перегонке данных из json в объекты
-from pydantic import BaseModel
+from src.models.base_model_improved import BaseModelImproved
 
-def orjson_dumps(v, *, default):
-    # orjson.dumps возвращает bytes, а pydantic требует unicode, поэтому декодируем
-    return orjson.dumps(v, default=default).decode()
 
-class Film(BaseModel):
-    id: str
+class Participant(BaseModelImproved):
+    """Модель данных персоны, участвующей в создании фильма."""
+
+    uuid: UUID
+    name: str
+
+
+class FilmGenre(BaseModelImproved):
+    """Модель данных жанра, к которому относится фильм."""
+
+    uuid: UUID
+    name: str
+
+
+class Film(BaseModelImproved):
+    """Модель данных кинопроизведения (минимальная - для главной страницы)."""
+
+    uuid: UUID
     title: str
-    description: str
+    imdb_rating: float
 
-    class Config:
-        # Заменяем стандартную работу с json на более быструю
-        json_loads = orjson.loads
-        json_dumps = orjson_dumps
+
+class FilmDetailed(Film):
+    """Схема данных подробностей о кинопроизведении."""
+
+    genre: Optional[List[FilmGenre]]  # TODO: уточнить, т.к.
+    # в прошлом спринте у меня здесь был просто str
+    description: Optional[str]
+    director: Optional[List[str]]
+    actors_names: Optional[List[str]]
+    writers_names: Optional[List[str]]
+    actors: Optional[List[Participant]]
+    writers: Optional[List[Participant]]
