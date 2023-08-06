@@ -11,8 +11,6 @@ class PortfolioFilm(BaseModelImproved):
 
     uuid: UUID
     roles: List[str]
-    # я бы добавил title, но в техническом задании этого поля нет
-    # если брать аналогию с актёрами в фильмах - здесь должен быть именно title
 
 
 class Person(BaseModelImproved):
