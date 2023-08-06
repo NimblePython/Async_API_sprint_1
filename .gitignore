@@ -1,4 +1,19 @@
-.venv
 *.pyc
 ./src/__pycache__/
+./__pycache__/
 .vscode
+
+.idea/
+.DS_Store
+
+# Environments
+.env
+.env.local
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+*.log
