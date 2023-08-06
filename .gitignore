@@ -4,6 +4,7 @@
 .vscode
 
 .idea/
+.DS_Store
 
 # Environments
 .env
