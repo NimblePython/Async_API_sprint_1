@@ -1,4 +1,15 @@
-.venv
 *.pyc
 ./src/__pycache__/
+./__pycache__/
 .vscode
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+*.log
