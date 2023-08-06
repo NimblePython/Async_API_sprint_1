@@ -7,7 +7,6 @@ services:
     env_file:
       - .env.local
     volumes:
-      # - ${HOME}/postgresql/data:/var/lib/postgresql/data
       - ./dump.sql:/docker-entrypoint-initdb.d/dump.sql:ro
     ports:
       - "5432:5432"  # чтобы при отладке использовать на хосте менеджеры БД (например pgAdmin)
@@ -45,4 +44,4 @@ services:
     build: ./postgres_to_es
     container_name: etl
     env_file:
-      - ./postgres_to_es/.env
+      - ./postgres_to_es/.env.prod
