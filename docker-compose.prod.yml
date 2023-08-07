@@ -4,15 +4,10 @@ services:
   postgres:
     image: postgres:13
     container_name: postgres
-    environment:
-      - POSTGRES_USER:app
-      - POSTGRES_DB:movies_database
     env_file:
       - .env.local
     volumes:
       - ./dump.sql:/docker-entrypoint-initdb.d/dump.sql:ro
-    ports:
-      - "5432:5432"  # чтобы при отладке использовать на хосте менеджеры БД (например pgAdmin)
     healthcheck:
       test:
         [
@@ -40,8 +35,6 @@ services:
       timeout: 10s
       retries: 5
     restart: unless-stopped
-    ports:
-      - "9200:9200"  # чтобы можно было законнетиться, например, Postman ом из хоста
 
   etl:
     build: ./postgres_to_es
