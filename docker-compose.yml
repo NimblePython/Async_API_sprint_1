@@ -5,14 +5,14 @@ services:
     image: postgres:13
     container_name: postgres
     env_file:
-      - .env.local
+      - .env
     volumes:
       - ./dump.sql:/docker-entrypoint-initdb.d/dump.sql:ro
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+          "pg_isready -U ${DB_USER} -d ${DB_NAME_PG}"
         ]
       interval: 5s
       timeout: 5s
@@ -40,4 +40,4 @@ services:
     build: ./postgres_to_es
     container_name: etl
     env_file:
-      - ./postgres_to_es/.env.prod
+      - .env
