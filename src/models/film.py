@@ -9,21 +9,21 @@ from src.models.base_model_improved import BaseModelImproved
 class Participant(BaseModelImproved):
     """Модель данных персоны, участвующей в создании фильма."""
 
-    uuid: UUID
+    id: UUID
     name: str
 
 
 class FilmGenre(BaseModelImproved):
     """Модель данных жанра, к которому относится фильм."""
 
-    uuid: UUID
+    id: UUID
     name: str
 
 
 class Film(BaseModelImproved):
     """Модель данных кинопроизведения (минимальная - для главной страницы)."""
 
-    uuid: UUID
+    id: UUID
     title: str
     imdb_rating: float
 
