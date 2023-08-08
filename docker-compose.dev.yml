@@ -45,3 +45,12 @@ services:
     container_name: etl
     env_file:
       - .env.local
+
+  redis: 
+    image: redis:6.2.6-alpine
+    ports:
+      - 6379:6379
+    volumes:
+      - ./redis_data:/data
+    env_file: 
+      - .env.local
