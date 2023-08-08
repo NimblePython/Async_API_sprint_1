@@ -6,4 +6,4 @@ lint:
 	mypy .
 
 up.local:
-    docker-compose -f docker-compose.dev.yml --env-file .env.local up -d
+	docker-compose -f docker-compose.dev.yml --env-file .env.local up -d
