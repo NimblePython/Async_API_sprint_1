@@ -38,7 +38,7 @@ services:
       retries: 5
     restart: unless-stopped
     ports:
-      - "9200:9200"  # чтобы можно было законнетиться, например, Postman ом из хоста
+      - "9200:9200"  # чтобы можно было законнектиться, например, Postman'ом из хоста
 
   etl:
     build: ./postgres_to_es
