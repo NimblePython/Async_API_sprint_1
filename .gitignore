@@ -17,3 +17,6 @@ env.bak/
 venv.bak/
 
 *.log
+
+#redis
+redis_data

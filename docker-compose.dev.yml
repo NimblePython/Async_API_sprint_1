@@ -38,10 +38,19 @@ services:
       retries: 5
     restart: unless-stopped
     ports:
-      - "9200:9200"  # чтобы можно было законнетиться, например, Postman ом из хоста
+      - "9200:9200"  # чтобы можно было законнектиться, например, Postman'ом из хоста
 
   etl:
     build: ./postgres_to_es
     container_name: etl
     env_file:
+      - .env.local
+
+  redis: 
+    image: redis:6.2.6-alpine
+    ports:
+      - 6379:6379
+    volumes:
+      - ./redis_data:/data
+    env_file: 
       - .env.local
