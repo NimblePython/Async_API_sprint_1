@@ -10,10 +10,10 @@ packages = []
 python = "^3.10"
 redis = "4.4.2"
 elasticsearch = {version = "7.9.1", extras = ["async"]}
-fastapi = "0.61.1"
+fastapi = "^0.101.0"
 orjson = "^3.9.2"
-pydantic = "1.9.0"
-uvicorn = "0.12.2"
+pydantic = "^2.1.1"
+uvicorn = "^0.23.2"
 uvloop = {version = "0.17.0", markers = 'sys_platform != "win32" and implementation_name == "cpython"'}
 
 [tool.poetry.group.dev.dependencies]
