@@ -84,17 +84,7 @@ class Load:
                 "analyzer": "ru_en"
             },
             "films": {
-                "type": "nested",
-                "dynamic": "strict",
-                "properties": {
-                    "id": {
-                        "type": "keyword"
-                    },
-                    "title": {
-                        "type": "text",
-                        "analyzer": "ru_en"
-                    }
-                }
+                "type": "keyword"
             }
         }
     }
@@ -104,7 +94,7 @@ class Load:
         'persons': index_persons_mappings,
     }
 
-    def __init__(self, data: list, es_index: Literal['movies', 'persons'], host: str, port: int):
+    def __init__(self, data: list, es_index: Literal[indexes.keys()], host: str, port: int):
         self.es_socket = f'http://{host}:{port}/'
         self.es = self.connect_to_es()
         self.data = data
@@ -114,16 +104,14 @@ class Load:
     def connect_to_es(self):
         return Elasticsearch(self.es_socket)
 
-    # TODO: убрать комментарий
-    #@backoff()
+    @backoff()
     def create_index(self):
         mappings = Load.indexes[self.es_index]
         self.es.indices.create(index=self.es_index,
                                settings=Load.indexes_settings,
                                mappings=mappings)
 
-    # TODO: убрать комментарий
-    # @backoff()
+    @backoff()
     def check_index(self):
         if not self.es.indices.exists(index=self.es_index):
             return False
@@ -137,8 +125,7 @@ class Load:
             doc['_source'] = record.model_dump_json()
             yield doc
 
-    # TODO: убрать комментарий
-    # @backoff()
+    @backoff()
     def insert_data(self, chunk_size: int) -> int:
         """
         Функция для вставки пачки записей с данными (фильмы, жанры, персоны) в ES

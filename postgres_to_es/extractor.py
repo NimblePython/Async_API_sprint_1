@@ -29,9 +29,17 @@ class LoggingCursor(pg_extensions.cursor):
 
 
 class Extractor:
+    # ключ отслеживающий дату последнего пероснажа, успешно записанного в ЭС вместе со всеми его фильмами
     PERSON_MODIFIED_KEY = '_pers_modified'
+
+    # ключ отслеживающий дату жанра, успешно записанного в ЭС вмсете со всеми фильмами этого жанра
     GENRE_MODIFIED_KEY = '_gen_modified'
+
+    # ключ отслеживающий дату фильма, успешно записанного в ЭС, в котором произошли изменения
     FILM_MODIFIED_KEY = '_film_modified'
+
+    # ключ, похожий на PERSON_MODIFIED_KEY, но этот необходим для контроля статуса записи в другой индекс ЭС
+    PERSON_IN_FILMS_MODIFIED_KEY = '_pers_in_films_modified'
 
     cnt_load = 0
     cnt_part_load = 0
@@ -100,8 +108,8 @@ class Extractor:
         chunk = [itm[0] for itm in chunk]
         return date, chunk
 
-    def get_films(self, model: Schema, entities: list):
-        # если источник изменений сами фильмы, то формируем один запрос, иначе - другой
+    def get_films_and_send_to_es(self, model: Schema, entities: list):
+        # если источник изменений сами фильмы, то формируем один вариант запроса, иначе - другой
         if model.table == 'film_work':
             query = \
                 f"""
@@ -135,7 +143,7 @@ class Extractor:
                     self.postgres_enricher()
                     # Если запись прошла успешно то меняем статус
                     if Extractor.cnt_part_load == Extractor.cnt_successes:
-                        # Изменяем сотояние (дату) для параметра от имени которого произошел вызов функции
+                        # Изменяем сотояние (дату) для модели от имени которой произошел вызов функции
                         self.manager.set_state(model.key, model.modified)
                         logging.info(f"Изменено сотояние для ключа {model.key} в значение {model.modified}")
                 except Exception as e:
@@ -151,20 +159,26 @@ class Extractor:
             time.sleep(self.pause)  # пауза между сессиями сриннинга БД
 
             data = self.get_key_value(Extractor.PERSON_MODIFIED_KEY)
-            objects.append(Schema('person', Extractor.PERSON_MODIFIED_KEY, data))
+            objects.append(Schema('person', Extractor.PERSON_MODIFIED_KEY, data, 'movies'))
 
             data = self.get_key_value(Extractor.GENRE_MODIFIED_KEY)
-            objects.append(Schema('genre', Extractor.GENRE_MODIFIED_KEY, data))
+            objects.append(Schema('genre', Extractor.GENRE_MODIFIED_KEY, data, 'movies'))
 
             data = self.get_key_value(Extractor.FILM_MODIFIED_KEY)
-            objects.append(Schema('film_work', Extractor.FILM_MODIFIED_KEY, data))
+            objects.append(Schema('film_work', Extractor.FILM_MODIFIED_KEY, data, 'movies'))
+
+            data = self.get_key_value(Extractor.PERSON_IN_FILMS_MODIFIED_KEY)
+            objects.append(Schema('person', Extractor.PERSON_IN_FILMS_MODIFIED_KEY, data, 'persons'))
+
 
             # перебираем последовательно 'person', 'genre', 'film_work'
             for cur_model in objects:
                 # Считывание данных из PG
                 with self.conn.cursor() as cur:
+
                     # запрашиваем CHUNK которые изменились после даты _MODIFIED
                     cur = self.query_exec(cur, self.get_query(cur_model))
+
                     while records := cur.fetchmany(self.fetch_size):
                         # формируем (кусочек) UUIN сущностей
                         changed_entities = [record for record in records]
@@ -173,7 +187,7 @@ class Extractor:
 
                         if changed_entities:
                             # готовим CHUNK фильмов связанных с изменениями и отправляем в ES
-                            self.get_films(cur_model, changed_entities)
+                            self.get_films_and_send_to_es(cur_model, changed_entities)
 
             Extractor.cnt_part_load = 0
             Extractor.cnt_successes = 0
