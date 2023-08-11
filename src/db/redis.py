@@ -5,11 +5,7 @@ from redis.asyncio import Redis
 
 from src.core.config import REDIS_HOST, REDIS_PORT
 
-redis: Optional[Redis] = Redis(
-    host=REDIS_HOST,
-    port=REDIS_PORT,
-)  # TODO: убедиться, что инициализация
-# объекта redis здесь, действительно, нужна.
+redis: Optional[Redis] = None
 
 # Функция понадобится при внедрении зависимостей
 async def get_redis() -> Redis:

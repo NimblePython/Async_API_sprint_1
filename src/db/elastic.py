@@ -2,8 +2,7 @@
 from typing import Optional
 from elasticsearch import AsyncElasticsearch
 
-es: Optional[AsyncElasticsearch] = AsyncElasticsearch()  # TODO: убедиться, что инициализация
-# объекта Elastic здесь, действительно, нужна.
+es: Optional[AsyncElasticsearch] = None
 
 # Функция понадобится при внедрении зависимостей
 async def get_elastic() -> AsyncElasticsearch:
