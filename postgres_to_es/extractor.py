@@ -9,7 +9,7 @@ import psycopg2.extensions as pg_extensions
 import statemanager
 import configparser
 
-from models import FilmworkModel, Schema
+from models import FilmworkModel, PersonModel, Schema
 from transform import Transform
 from psycopg2.extensions import connection as _connection
 from datetime import datetime
@@ -108,6 +108,63 @@ class Extractor:
         chunk = [itm[0] for itm in chunk]
         return date, chunk
 
+    def get_data_and_send_to_es(self, model: Schema, entities: list):
+        if model.table == 'person':
+            query = \
+                f"""
+                    SELECT row_to_json(info) as view
+                    FROM (
+                        SELECT 
+                            p.id uuid, 
+                            p.full_name,
+                            (
+                                SELECT 
+                                    json_agg(film_group)
+                                FROM 
+                                (
+                                    SELECT 
+                                        pfw.film_work_id uuid,
+                                        json_agg(pfw."role") roles 
+                                    FROM 
+                                        content.person_film_work pfw
+                                    WHERE 
+                                        pfw.person_id = p.id
+                                    GROUP BY 1
+                                ) film_group
+                            ) as films
+                        FROM
+                            content.person p
+                            LEFT JOIN content.person_film_work tfw ON tfw.person_id = p.id
+                        WHERE
+                            tfw.person_id in ({', '.join(f"'{el}'" for el in entities)})
+                        GROUP BY 1
+                        LIMIT {self.chunk}
+                    ) info;
+                """
+        elif model.table == 'genre':
+            query = \
+                f"""
+
+                """
+
+        with self.conn.cursor() as cur:
+            # запрашиваем CHUNK данных, которые связаны с изменениями
+            cur = self.query_exec(cur, query)
+            # готовим fetch_size кусок UUIN фильмов для пушинга в ES
+            while records := cur.fetchmany(self.fetch_size):
+                data_to_elastic = [PersonModel(**record['view']) for record in records]
+                logging.debug(f'Вызван для {model.table} --- Данные собраны для пушинга в индекс ES: {model.es_index}')
+                try:
+                    # пушим в ES
+                    self.push_to_es(data_to_elastic, es_index=model.es_index)
+                    # Если запись прошла успешно то меняем статус
+                    if Extractor.cnt_part_load == Extractor.cnt_successes:
+                        # Изменяем сотояние (дату) для модели от имени которой произошел вызов функции
+                        self.manager.set_state(model.key, model.modified)
+                        logging.info(f"Изменено сотояние для ключа {model.key} в значение {model.modified}")
+                except Exception as e:
+                    logging.exception('%s: %s' % (e.__class__.__name__, e))
+
     def get_films_and_send_to_es(self, model: Schema, entities: list):
         # если источник изменений сами фильмы, то формируем один вариант запроса, иначе - другой
         if model.table == 'film_work':
@@ -170,7 +227,6 @@ class Extractor:
             data = self.get_key_value(Extractor.PERSON_IN_FILMS_MODIFIED_KEY)
             objects.append(Schema('person', Extractor.PERSON_IN_FILMS_MODIFIED_KEY, data, 'persons'))
 
-
             # перебираем последовательно 'person', 'genre', 'film_work'
             for cur_model in objects:
                 # Считывание данных из PG
@@ -186,8 +242,11 @@ class Extractor:
                         cur_model.modified, changed_entities = self.get_date_from_chunk_and_cut(changed_entities)
 
                         if changed_entities:
-                            # готовим CHUNK фильмов связанных с изменениями и отправляем в ES
-                            self.get_films_and_send_to_es(cur_model, changed_entities)
+                            # готовим CHUNK фильмов связанных с изменениями и отправляем в ES в соотв. индекс
+                            if cur_model.es_index == 'movies':
+                                self.get_films_and_send_to_es(cur_model, changed_entities)
+                            else:
+                                self.get_data_and_send_to_es(cur_model, changed_entities)
 
             Extractor.cnt_part_load = 0
             Extractor.cnt_successes = 0
@@ -200,9 +259,9 @@ class Extractor:
         if not film_work.director:
             film_work.director = []
         if film_work.writers:
-            film_work.writers_names = [writer.name for writer in film_work.writers]
+            film_work.writers_names = [writer.full_name for writer in film_work.writers]
         if film_work.actors:
-            film_work.actors_names = [actor.name for actor in film_work.actors]
+            film_work.actors_names = [actor.full_name for actor in film_work.actors]
 
         return film_work
 
@@ -232,7 +291,7 @@ class Extractor:
                             (
                                 SELECT
                                     p.id id, 
-                                    p.full_name as name
+                                    p.full_name as full_name
                                 FROM content.person_film_work pfw, content.person p
                                 WHERE pfw.film_work_id = fw.id AND pfw.person_id = p.id AND pfw.role='actor'
                             ) actors_group
@@ -243,7 +302,7 @@ class Extractor:
                             (
                                 SELECT
                                     p.id id, 
-                                    p.full_name as name
+                                    p.full_name as full_name
                                 FROM 
                                     content.person_film_work pfw, 
                                     content.person p
@@ -290,14 +349,16 @@ class Extractor:
             while records := cur.fetchmany(self.fetch_size):
                 raw_records = [FilmworkModel(**record['films']) for record in records]
                 film_works_to_elastic = [self.make_names(record) for record in raw_records]
+                self.push_to_es(film_works_to_elastic, es_index='movies')
 
-                t = Transform()
-                cnt_films = len(film_works_to_elastic)
+    def push_to_es(self, data_to_elastic: list, es_index: str):
+        t = Transform()
+        cnt = len(data_to_elastic)
 
-                Extractor.cnt_load += cnt_films
-                Extractor.cnt_part_load = cnt_films
-                Extractor.cnt_successes = t.prepare_and_push(film_works_to_elastic,
-                                                             es_index='movies',
-                                                             chunk_size=cnt_films,
-                                                             host_name=self.es_host,
-                                                             port=self.es_port)
+        Extractor.cnt_load += cnt
+        Extractor.cnt_part_load = cnt
+        Extractor.cnt_successes = t.prepare_and_push(data_to_elastic,
+                                                     es_index=es_index,
+                                                     chunk_size=cnt,
+                                                     host_name=self.es_host,
+                                                     port=self.es_port)

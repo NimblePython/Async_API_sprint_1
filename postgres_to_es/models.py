@@ -41,7 +41,7 @@ class PortfolioFilm(BaseModel):
 
 
 class PersonModel(PersonMixin):
-    id: uuid.UUID
+    id: uuid.UUID = Field(alias='uuid')
     full_name: str
     films: Optional[list[PortfolioFilm]]
 
