@@ -9,11 +9,11 @@ packages = []
 [tool.poetry.dependencies]
 python = "^3.10"
 redis = "4.4.2"
-elasticsearch = {version = "7.9.1", extras = ["async"]}
-fastapi = "0.61.1"
+elasticsearch = "8.8.2"
+fastapi = "0.100.1"
 orjson = "^3.9.2"
-pydantic = "1.9.0"
-uvicorn = "0.12.2"
+pydantic = "2.0.3"
+uvicorn = "^0.23.2"
 uvloop = {version = "0.17.0", markers = 'sys_platform != "win32" and implementation_name == "cpython"'}
 
 [tool.poetry.group.dev.dependencies]
@@ -21,6 +21,8 @@ wemake-python-styleguide = "^0.18.0"
 mypy = "^1.4.1"
 autopep8 = "^2.0.2"
 flake8-pytest-style = "^1.7.2"
+psycopg2-binary = "2.9.6"
+python-dotenv = "1.0.0"
 
 [build-system]
 requires = ["poetry-core"]
