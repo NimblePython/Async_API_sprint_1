@@ -1,9 +1,9 @@
 import logging
-import requests
 
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import streaming_bulk
 from backoff_dec import backoff
+from typing import Literal
 from models import FilmworkModel
 from http import HTTPStatus
 
@@ -12,7 +12,7 @@ class Load:
     successes = 0
     docs_count = 0
 
-    index_settings = {
+    indexes_settings = {
         "refresh_interval": "1s",
         "analysis": {
             "filter": {
@@ -53,7 +53,7 @@ class Load:
         }
     }
 
-    index_mappings = {
+    index_movies_mappings = {
         "dynamic": "strict",
         "properties": {
           "id": {"type": "keyword"},
@@ -63,32 +63,69 @@ class Load:
           "description": {"type": "text", "analyzer": "ru_en"},
           "director": {"type": "text", "analyzer": "ru_en"},
           "actors_names": {"type": "text", "analyzer": "ru_en"},
-          "writers_names": {"type": "text","analyzer": "ru_en"},
-          "actors": {"type": "nested", "dynamic": "strict","properties": {"id": {"type": "keyword"}, "name": {"type": "text", "analyzer": "ru_en"}}},
-          "writers": {"type": "nested", "dynamic": "strict","properties": {"id": {"type": "keyword"},"name": {"type": "text", "analyzer": "ru_en"}}}
+          "writers_names": {"type": "text", "analyzer": "ru_en"},
+          "actors": {"type": "nested", "dynamic": "strict", "properties": {"id": {"type": "keyword"}, "name": {"type": "text", "analyzer": "ru_en"}}},
+          "writers": {"type": "nested", "dynamic": "strict", "properties": {"id": {"type": "keyword"}, "name": {"type": "text", "analyzer": "ru_en"}}}
         }
     }
 
-    def __init__(self, data: list[FilmworkModel], host, port):
+    index_persons_mappings = {
+        "dynamic": "strict",
+        "properties": {
+            "id": {
+                "type": "keyword"
+            },
+            "full_name": {
+                "type": "text",
+                "analyzer": "ru_en"
+            },
+            "role": {
+                "type": "text",
+                "analyzer": "ru_en"
+            },
+            "films": {
+                "type": "nested",
+                "dynamic": "strict",
+                "properties": {
+                    "id": {
+                        "type": "keyword"
+                    },
+                    "title": {
+                        "type": "text",
+                        "analyzer": "ru_en"
+                    }
+                }
+            }
+        }
+    }
+
+    indexes = {
+        'movies': index_movies_mappings,
+        'persons': index_persons_mappings,
+    }
+
+    def __init__(self, data: list, es_index: Literal['movies', 'persons'], host: str, port: int):
         self.es_socket = f'http://{host}:{port}/'
         self.es = self.connect_to_es()
         self.data = data
+        self.es_index = es_index  # текущий индекс с которым будет работать вставка данных
 
     @backoff()
     def connect_to_es(self):
         return Elasticsearch(self.es_socket)
 
-    @backoff()
+    # TODO: убрать комментарий
+    #@backoff()
     def create_index(self):
-        self.es.indices.create(index='movies',
-                               settings=Load.index_settings,
-                               mappings=Load.index_mappings)
+        mappings = Load.indexes[self.es_index]
+        self.es.indices.create(index=self.es_index,
+                               settings=Load.indexes_settings,
+                               mappings=mappings)
 
-    @backoff()
+    # TODO: убрать комментарий
+    # @backoff()
     def check_index(self):
-        url = self.es_socket + 'movies/_mapping'
-        message = requests.get(url)
-        if message.status_code == HTTPStatus.NOT_FOUND:
+        if not self.es.indices.exists(index=self.es_index):
             return False
         return True
 
@@ -96,16 +133,19 @@ class Load:
         for record in self.data:
             doc = dict()
             doc['_id'] = record.id
-            doc['_index'] = 'movies'
+            doc['_index'] = self.es_index
             doc['_source'] = record.model_dump_json()
             yield doc
 
-    @backoff()
-    def insert_films(self, chunk_size: int) -> int:
+    # TODO: убрать комментарий
+    # @backoff()
+    def insert_data(self, chunk_size: int) -> int:
         """
-        Функция для вставки пачки записей о фильмах в ES
+        Функция для вставки пачки записей с данными (фильмы, жанры, персоны) в ES
 
-        :param chunk_size: размер пачки данных
+        :param
+            chunk_size: размер пачки данных
+            index_key: индекс, куда следует производить вставку
         :return: число успешно вставленнх записей
         """
         if not self.check_index():
@@ -113,7 +153,7 @@ class Load:
 
         successful_records = 0
         for ok, action in streaming_bulk(self.es,
-                                         index='movies',
+                                         index=self.es_index,
                                          actions=self.get_data(),
                                          chunk_size=chunk_size):
             successful_records += ok

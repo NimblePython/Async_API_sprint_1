@@ -101,16 +101,7 @@ class Extractor:
         return date, chunk
 
     def get_films(self, model: Schema, entities: list):
-        query = \
-            f"""
-            SELECT DISTINCT fw.id
-            FROM content.film_work fw
-            LEFT JOIN 
-                content.{model.table}_film_work tfw ON tfw.film_work_id = fw.id
-            WHERE 
-                tfw.{model.table}_id in ({', '.join(f"'{el}'" for el in entities)})
-            LIMIT {self.chunk};
-            """
+        # если источник изменений сами фильмы, то формируем один запрос, иначе - другой
         if model.table == 'film_work':
             query = \
                 f"""
@@ -118,6 +109,17 @@ class Extractor:
                 FROM content.film_work fw
                 WHERE 
                     fw.id in ({', '.join(f"'{el}'" for el in entities)})
+                LIMIT {self.chunk};
+                """
+        else:
+            query = \
+                f"""
+                SELECT DISTINCT fw.id
+                FROM content.film_work fw
+                LEFT JOIN 
+                    content.{model.table}_film_work tfw ON tfw.film_work_id = fw.id
+                WHERE 
+                    tfw.{model.table}_id in ({', '.join(f"'{el}'" for el in entities)})
                 LIMIT {self.chunk};
                 """
 
@@ -157,13 +159,14 @@ class Extractor:
             data = self.get_key_value(Extractor.FILM_MODIFIED_KEY)
             objects.append(Schema('film_work', Extractor.FILM_MODIFIED_KEY, data))
 
+            # перебираем последовательно 'person', 'genre', 'film_work'
             for cur_model in objects:
                 # Считывание данных из PG
                 with self.conn.cursor() as cur:
                     # запрашиваем CHUNK которые изменились после даты _MODIFIED
                     cur = self.query_exec(cur, self.get_query(cur_model))
                     while records := cur.fetchmany(self.fetch_size):
-                        # формируем (кусочек) UUIN персоналий
+                        # формируем (кусочек) UUIN сущностей
                         changed_entities = [record for record in records]
                         # запомним дату пследнего из fetch_size для изменения статуса
                         cur_model.modified, changed_entities = self.get_date_from_chunk_and_cut(changed_entities)
@@ -280,6 +283,7 @@ class Extractor:
                 Extractor.cnt_load += cnt_films
                 Extractor.cnt_part_load = cnt_films
                 Extractor.cnt_successes = t.prepare_and_push(film_works_to_elastic,
+                                                             es_index='movies',
                                                              chunk_size=cnt_films,
                                                              host_name=self.es_host,
                                                              port=self.es_port)

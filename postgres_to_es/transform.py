@@ -8,20 +8,22 @@ from load import Load
 
 class Transform:
     @staticmethod
-    def prepare_and_push(data: list[FilmworkModel],
+    def prepare_and_push(data: list,
+                         es_index: str,
                          host_name: str,
                          port: int,
                          chunk_size: int = 500) -> int:
         """
-        :param data: List of films to push to ES
+        :param data: List of films, persons или жанров to push to ES
+        :param es_index: Index ES в который необходимо записать данные
         :param host_name: ElasticSearch server HOST
         :param port: ElasticSearch server PORT
         :param chunk_size: Size of data to push per time
         :return : количество успешно сохраненных в ЭС фильмов
         """
 
-        load_to_es = Load(data, host_name, port)
-        ok = load_to_es.insert_films(chunk_size)
+        load_to_es = Load(data, es_index, host_name, port)
+        ok = load_to_es.insert_data(chunk_size)
 
         return ok
 
