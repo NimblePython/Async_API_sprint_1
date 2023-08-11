@@ -11,6 +11,7 @@ class Schema:
     table: str
     key: str
     modified: str
+    es_index: Literal['movies', 'persons']
 
 
 class PersonMixin(BaseModel):
@@ -18,12 +19,7 @@ class PersonMixin(BaseModel):
     name: str
 
 
-class FilmworkMixin(BaseModel):
-    id: uuid.UUID
-    title: str
-
-
-class FilmworkModel(FilmworkMixin):
+class FilmworkModel(BaseModel):
     id: uuid.UUID
     title: str
     description: str | None
@@ -43,7 +39,7 @@ class PersonModel(PersonMixin):
     id: uuid.UUID
     name: str
     role: Literal['director', 'actor', 'writer', None]
-    films: list[FilmworkMixin]
+    films: list[uuid.UUID]
 
 
 
