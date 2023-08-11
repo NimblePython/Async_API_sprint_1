@@ -79,12 +79,18 @@ class Load:
                 "type": "text",
                 "analyzer": "ru_en"
             },
-            "role": {
-                "type": "text",
-                "analyzer": "ru_en"
-            },
             "films": {
-                "type": "keyword"
+                "type": "nested",
+                "dynamic": "strict",
+                "properties": {
+                    "id": {
+                        "type": "keyword",
+                    },
+                    "roles": {
+                        "type": "text",
+                        "analyzer": "ru_en"
+                    }
+                }
             }
         }
     }

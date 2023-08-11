@@ -16,7 +16,7 @@ class Schema:
 
 class PersonMixin(BaseModel):
     id: uuid.UUID
-    name: str
+    full_name: str
 
 
 class FilmworkModel(BaseModel):
@@ -35,11 +35,15 @@ class FilmworkModel(BaseModel):
     actors_names: Optional[list[str]] = None
 
 
+class PortfolioFilm(BaseModel):
+    uuid: uuid.UUID
+    roles: list[str]
+
+
 class PersonModel(PersonMixin):
     id: uuid.UUID
-    name: str
-    role: Literal['director', 'actor', 'writer', None]
-    films: list[uuid.UUID]
+    full_name: str
+    films: Optional[list[PortfolioFilm]]
 
 
 
