@@ -278,7 +278,7 @@ class Extractor:
                 FROM 
                 (
                     SELECT 	
-                        fw.id, 
+                        fw.id uuid, 
                         fw.title,
                         fw.description,
                         fw.rating as imdb_rating,
@@ -290,7 +290,7 @@ class Extractor:
                             FROM 
                             (
                                 SELECT
-                                    p.id id, 
+                                    p.id uuid, 
                                     p.full_name as full_name
                                 FROM content.person_film_work pfw, content.person p
                                 WHERE pfw.film_work_id = fw.id AND pfw.person_id = p.id AND pfw.role='actor'
@@ -301,7 +301,7 @@ class Extractor:
                             FROM 
                             (
                                 SELECT
-                                    p.id id, 
+                                    p.id uuid, 
                                     p.full_name as full_name
                                 FROM 
                                     content.person_film_work pfw, 

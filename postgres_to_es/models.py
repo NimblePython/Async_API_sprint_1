@@ -1,5 +1,4 @@
-import uuid
-
+from uuid import UUID
 from pydantic import BaseModel, Field
 from datetime import datetime, date
 from typing import Optional, Literal
@@ -15,12 +14,12 @@ class Schema:
 
 
 class PersonMixin(BaseModel):
-    id: uuid.UUID
+    uuid: UUID
     full_name: str
 
 
 class FilmworkModel(BaseModel):
-    id: uuid.UUID
+    uuid: UUID
     title: str
     description: str | None
     imdb_rating: Optional[float] = None
@@ -36,12 +35,12 @@ class FilmworkModel(BaseModel):
 
 
 class PortfolioFilm(BaseModel):
-    uuid: uuid.UUID
+    uuid: UUID
     roles: list[str]
 
 
 class PersonModel(PersonMixin):
-    id: uuid.UUID = Field(alias='uuid')
+    uuid: UUID
     full_name: str
     films: Optional[list[PortfolioFilm]]
 

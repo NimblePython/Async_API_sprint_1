@@ -56,7 +56,7 @@ class Load:
     index_movies_mappings = {
         "dynamic": "strict",
         "properties": {
-          "id": {
+          "uuid": {
               "type": "keyword"
           },
           "imdb_rating": {
@@ -94,7 +94,7 @@ class Load:
               "type": "nested",
               "dynamic": "strict",
               "properties": {
-                  "id": {
+                  "uuid": {
                       "type": "keyword"
                   },
                   "full_name": {
@@ -107,7 +107,7 @@ class Load:
               "type": "nested",
               "dynamic": "strict",
               "properties": {
-                  "id": {
+                  "uuid": {
                       "type": "keyword"
                   },
                   "full_name": {
@@ -122,7 +122,7 @@ class Load:
     index_persons_mappings = {
         "dynamic": "strict",
         "properties": {
-            "id": {
+            "uuid": {
                 "type": "keyword"
             },
             "full_name": {
@@ -145,9 +145,23 @@ class Load:
         }
     }
 
+    index_genres_mappings = {
+        "dynamic": "strict",
+        "properties": {
+            "uuid": {
+                "type": "keyword"
+            },
+            "name": {
+                "type": "text",
+                "analyzer": "ru_en"
+            }
+        }
+    }
+
     indexes = {
         'movies': index_movies_mappings,
         'persons': index_persons_mappings,
+        'genres': index_genres_mappings,
     }
 
     def __init__(self, data: list, es_index: Literal[indexes.keys()], host: str, port: int):
@@ -176,7 +190,7 @@ class Load:
     def get_data(self) -> dict:
         for record in self.data:
             doc = dict()
-            doc['_id'] = record.id
+            doc['_id'] = record.uuid
             doc['_index'] = self.es_index
             doc['_source'] = record.model_dump_json()
             # logging.info(f'Запись данных в ElasticSearch: {doc}')
