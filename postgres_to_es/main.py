@@ -7,6 +7,7 @@ import psycopg2
 import os
 import extractor
 import logging
+import configparser
 
 from dotenv import load_dotenv, find_dotenv
 from contextlib import closing
@@ -40,7 +41,16 @@ def connect_to_db(params):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG,
+    config = configparser.ConfigParser()  # создаём объект парсера конфига
+    config.read('settings.ini')
+    log_level = config['Log']['log_level']
+    level = {
+        "INFO": logging.INFO,
+        "DEBUG": logging.DEBUG,
+        "WARNING": logging.WARNING,
+    }
+
+    logging.basicConfig(level=level[log_level],
                         format='%(asctime)s %(levelname)s %(message)s')
 
     pg_db = os.environ.get('DB_NAME_PG')

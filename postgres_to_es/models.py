@@ -1,16 +1,8 @@
 from uuid import UUID
 from pydantic import BaseModel, Field
-from datetime import datetime, date
-from typing import Optional, Literal
-from dataclasses import dataclass, field
-
-
-@dataclass
-class Schema:
-    table: str
-    key: str
-    modified: str
-    es_index: Literal['movies', 'persons']
+from datetime import datetime
+from typing import Optional, Literal, Union
+from dataclasses import dataclass
 
 
 class PersonMixin(BaseModel):
@@ -45,6 +37,18 @@ class PersonModel(PersonMixin):
     films: Optional[list[PortfolioFilm]]
 
 
+class GenreModel(BaseModel):
+    uuid: UUID
+    name: str
+
+
+@dataclass
+class Schema:
+    table: str
+    model: Union[type(FilmworkModel), type(PersonModel), type(GenreModel)]
+    key: str
+    modified: str
+    es_index: Literal['movies', 'persons', 'genres']
 
 
 

@@ -9,7 +9,7 @@ import psycopg2.extensions as pg_extensions
 import statemanager
 import configparser
 
-from models import FilmworkModel, PersonModel, Schema
+from models import FilmworkModel, PersonModel, GenreModel, Schema
 from transform import Transform
 from psycopg2.extensions import connection as _connection
 from datetime import datetime
@@ -29,17 +29,20 @@ class LoggingCursor(pg_extensions.cursor):
 
 
 class Extractor:
-    # ключ отслеживающий дату последнего пероснажа, успешно записанного в ЭС вместе со всеми его фильмами
+    # ключ отслеживающий дату последнего перcонажа, записанного в ЭС вместе со всеми его фильмами в индексе: movies
     PERSON_MODIFIED_KEY = '_pers_modified'
 
-    # ключ отслеживающий дату жанра, успешно записанного в ЭС вмсете со всеми фильмами этого жанра
+    # ключ отслеживающий дату жанра, успешно записанного в ЭС вмсете со всеми фильмами этого жанра в индексе: movies
     GENRE_MODIFIED_KEY = '_gen_modified'
 
-    # ключ отслеживающий дату фильма, успешно записанного в ЭС, в котором произошли изменения
+    # ключ отслеживающий дату фильма, в котором произошли изменения и успешно записанного в ЭС в индекс: movies
     FILM_MODIFIED_KEY = '_film_modified'
 
-    # ключ, похожий на PERSON_MODIFIED_KEY, но этот необходим для контроля статуса записи в другой индекс ЭС
+    # ключ, похожий на PERSON_MODIFIED_KEY, но этот необходим для контроля статуса записи в индексе: persons
     PERSON_IN_FILMS_MODIFIED_KEY = '_pers_in_films_modified'
+
+    # ключ, похожий на GENRE_MODIFIED_KEY, но этот необходим для контроля статуса записи в индексе: genres
+    GENRE_IN_FILMS_MODIFIED_KEY = '_gen_in_films_modified'
 
     cnt_load = 0
     cnt_part_load = 0
@@ -94,10 +97,10 @@ class Extractor:
         value = datetime(1895, 12, 28, 0, 0).strftime('%Y-%m-%d %H:%M:%S')  # дата рождения синематографа
         if date := self.manager.get_state(key):
             value = date
-            logging.debug(f'Ключ {key} считан из хранилища: {value}')
+            logging.info(f'Ключ {key} считан из хранилища: {value}')
         else:
             self.manager.set_state(key, value)
-            logging.debug(f'Ключ {key} создан и записан в хранилище со значением {value}')
+            logging.info(f'Ключ {key} создан и записан в хранилище со значением {value}')
 
         return value
 
@@ -144,7 +147,21 @@ class Extractor:
         elif model.table == 'genre':
             query = \
                 f"""
-
+                    SELECT row_to_json(info) as view
+                    FROM (      
+                        SELECT 
+                            DISTINCT fw.id uuid,
+                            g."name"
+                        FROM 
+                            content.film_work fw,
+                            content.genre g
+                            LEFT JOIN content.genre_film_work gfw ON gfw.genre_id = g.id
+                        WHERE
+                            gfw.genre_id in ({', '.join(f"'{el}'" for el in entities)})
+                        AND
+                            gfw.film_work_id = fw.id
+                        LIMIT {self.chunk}
+                    ) info;
                 """
 
         with self.conn.cursor() as cur:
@@ -152,8 +169,8 @@ class Extractor:
             cur = self.query_exec(cur, query)
             # готовим fetch_size кусок UUIN фильмов для пушинга в ES
             while records := cur.fetchmany(self.fetch_size):
-                data_to_elastic = [PersonModel(**record['view']) for record in records]
-                logging.debug(f'Вызван для {model.table} --- Данные собраны для пушинга в индекс ES: {model.es_index}')
+                data_to_elastic = [model.model(**record['view']) for record in records]
+                logging.info(f'Вызван для таблицы {model.table} --- Данные собраны для пушинга в индекс ES: {model.es_index}')
                 try:
                     # пушим в ES
                     self.push_to_es(data_to_elastic, es_index=model.es_index)
@@ -216,18 +233,22 @@ class Extractor:
             time.sleep(self.pause)  # пауза между сессиями сриннинга БД
 
             data = self.get_key_value(Extractor.PERSON_MODIFIED_KEY)
-            objects.append(Schema('person', Extractor.PERSON_MODIFIED_KEY, data, 'movies'))
+            objects.append(Schema('person', FilmworkModel, Extractor.PERSON_MODIFIED_KEY, data, 'movies'))
 
             data = self.get_key_value(Extractor.GENRE_MODIFIED_KEY)
-            objects.append(Schema('genre', Extractor.GENRE_MODIFIED_KEY, data, 'movies'))
+            objects.append(Schema('genre', FilmworkModel, Extractor.GENRE_MODIFIED_KEY, data, 'movies'))
 
             data = self.get_key_value(Extractor.FILM_MODIFIED_KEY)
-            objects.append(Schema('film_work', Extractor.FILM_MODIFIED_KEY, data, 'movies'))
+            objects.append(Schema('film_work', FilmworkModel, Extractor.FILM_MODIFIED_KEY, data, 'movies'))
 
             data = self.get_key_value(Extractor.PERSON_IN_FILMS_MODIFIED_KEY)
-            objects.append(Schema('person', Extractor.PERSON_IN_FILMS_MODIFIED_KEY, data, 'persons'))
+            objects.append(Schema('person', PersonModel, Extractor.PERSON_IN_FILMS_MODIFIED_KEY, data, 'persons'))
 
-            # перебираем последовательно 'person', 'genre', 'film_work'
+            data = self.get_key_value(Extractor.GENRE_IN_FILMS_MODIFIED_KEY)
+            objects.append(Schema('genre', GenreModel, Extractor.GENRE_IN_FILMS_MODIFIED_KEY, data, 'genres'))
+
+            # перебираем последовательно 'person', 'genre', 'film_work' для записи в индекс movies
+            # а также далее 'person' и 'genre' для записи в индексы persons и genres соответственно
             for cur_model in objects:
                 # Считывание данных из PG
                 with self.conn.cursor() as cur:

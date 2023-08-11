@@ -1,5 +1,6 @@
 import abc
 import json
+import logging
 
 from typing import Any, Dict
 
@@ -55,8 +56,8 @@ class State:
         conditions = self.storage.retrieve_state()
         old_value = None
         if not self.get_state(key):
-            print(f'Внимание! Попытка сохранения несуществующего ключа: {key} в set_state()')
-            print('Рекомендуем проверять наличие ключа перед вызовом set_state()')
+            logging.warning(f'Внимание! Попытка сохранения несуществующего ключа: {key} в set_state()')
+            logging.warning('Рекомендуем проверять наличие ключа перед вызовом set_state()')
         else:
             old_value = conditions[key]
 
