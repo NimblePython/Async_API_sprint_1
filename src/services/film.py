@@ -5,11 +5,13 @@ from functools import lru_cache
 from typing import Optional
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
+
 from fastapi import Depends
 from redis.asyncio import Redis
 
-from src.db.elastic import get_elastic
-from src.db.redis import get_redis
+from src.core import config
+from src.db.elastic import es, get_elastic
+from src.db.redis import get_redis, redis
 from src.models.film import Film
 
 FILM_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
@@ -78,23 +80,21 @@ def get_film_service(
     return FilmService(redis, elastic)
 
 
-# Блок кода ниже нужен только для отладки:
+# Блок кода ниже нужен только для отладки сервиса:
 if __name__ == '__main__':
+    redis = Redis(host=config.REDIS_HOST, port=config.REDIS_PORT)
+    es = AsyncElasticsearch(hosts=[f'{config.ELASTIC_HOST}:{config.ELASTIC_PORT}'])
+    service = FilmService(redis=redis, elastic=es)
 
     loop = asyncio.get_event_loop()
-    redis = loop.run_until_complete(get_redis())
-    elastic = loop.run_until_complete(get_elastic())
-    logger.debug(redis)
-    service = get_film_service(
-        redis=redis,
-        elastic=elastic,
-    )
 
     resulting_film = loop.run_until_complete(
         service.get_by_id(
-            film_id='ac58403b-7070-4dcc-8e53-fa2d2d2284ab'
+            film_id='ac58403b-7070-4dcc-8e53-fa2d2d2284ab',
         )
     )
 
+    loop.run_until_complete(redis.close())
+    loop.run_until_complete(es.close())
     loop.close()
     logger.info(resulting_film)
