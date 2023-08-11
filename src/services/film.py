@@ -80,18 +80,17 @@ def get_film_service(
     return FilmService(redis, elastic)
 
 
-# Блок кода ниже нужен только для отладки:
+# Блок кода ниже нужен только для отладки сервиса:
 if __name__ == '__main__':
     redis = Redis(host=config.REDIS_HOST, port=config.REDIS_PORT)
     es = AsyncElasticsearch(hosts=[f'{config.ELASTIC_HOST}:{config.ELASTIC_PORT}'])
+    service = FilmService(redis=redis, elastic=es)
 
     loop = asyncio.get_event_loop()
-    logger.debug(redis)
-    service = get_film_service(redis=redis, elastic=es)
 
     resulting_film = loop.run_until_complete(
         service.get_by_id(
-            film_id='ac58403b-7070-4dcc-8e53-fa2d2d2284ab'
+            film_id='ac58403b-7070-4dcc-8e53-fa2d2d2284ab',
         )
     )
 
