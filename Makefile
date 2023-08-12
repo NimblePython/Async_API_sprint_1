@@ -30,3 +30,9 @@ debug.film.service:
 # при старте контейнеров (up -d), но может сбить с толку.
 logs.pg.local:
 	docker compose -f docker-compose.dev.yml --env-file .env.local logs postgres
+
+logs.etl.local:
+	docker compose -f docker-compose.dev.yml --env-file .env.local logs etl
+
+rebuild.etl.local:
+	docker compose -f docker-compose.dev.yml --env-file .env.local up -d --build etl
