@@ -58,14 +58,14 @@ class FilmService(object):
             return None
 
         # pydantic предоставляет удобное API для создания объекта моделей из json
-        return Film.parse_raw(film_data)  # возвращаем десериализованный объект Film
+        return Film.model_validate_json(film_data)  # возвращаем десериализованный объект Film
 
     async def _put_film_to_cache(self, film: Film):
         # Сохраняем данные о фильме, используя команду set
         # Выставляем время жизни кеша — 5 минут
         # https://redis.io/commands/set/
         # pydantic позволяет сериализовать модель в json
-        await self.redis.set(str(film.uuid), film.json(), FILM_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(str(film.uuid), film.model_dump_json(), FILM_CACHE_EXPIRE_IN_SECONDS)
 
 
 # get_film_service — это провайдер FilmService.
