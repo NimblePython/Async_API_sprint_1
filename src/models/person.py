@@ -3,17 +3,17 @@
 from typing import List, Optional
 from uuid import UUID
 
-from src.models.base_model_improved import BaseModelImproved
+from pydantic import BaseModel
 
 
-class PortfolioFilm(BaseModelImproved):
+class PortfolioFilm(BaseModel):
     """Модель данных фильма в портфолио персоны."""
 
     uuid: UUID
     roles: List[str]
 
 
-class Person(BaseModelImproved):
+class Person(BaseModel):
     """Модель данных персоны."""
 
     uuid: UUID
