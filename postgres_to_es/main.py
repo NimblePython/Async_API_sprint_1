@@ -53,11 +53,11 @@ if __name__ == '__main__':
     logging.basicConfig(level=level[log_level],
                         format='%(asctime)s %(levelname)s %(message)s')
 
-    pg_db = os.environ.get('DB_NAME_PG')
-    usr = os.environ.get('DB_USER')
-    pwd = os.environ.get('DB_PASSWORD')
-    pg_host = os.environ.get('PG_HOST')
-    pg_port = int(os.environ.get('PG_PORT'))
+    pg_db = os.environ.get('POSTGRES_DB')
+    usr = os.environ.get('POSTGRES_USER')
+    pwd = os.environ.get('POSTGRES_PASSWORD')
+    pg_host = os.environ.get('POSTGRES_HOST')
+    pg_port = int(os.environ.get('POSTGRES_PORT'))
     es_host = os.environ.get('ES_HOST')
     es_port = int(os.environ.get('ES_PORT'))
 
@@ -71,4 +71,3 @@ if __name__ == '__main__':
 
     except Exception as e:
         print("%s: %s" % (e.__class__.__name__, e))
-
