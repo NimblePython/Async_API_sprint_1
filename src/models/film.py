@@ -3,24 +3,24 @@
 from typing import List, Optional
 from uuid import UUID
 
-from src.models.base_model_improved import BaseModelImproved
+from pydantic import BaseModel
 
 
-class Participant(BaseModelImproved):
+class Participant(BaseModel):
     """Модель данных персоны, участвующей в создании фильма."""
 
     uuid: UUID
     name: str
 
 
-class FilmGenre(BaseModelImproved):
+class FilmGenre(BaseModel):
     """Модель данных жанра, к которому относится фильм."""
 
     uuid: UUID
     name: str
 
 
-class Film(BaseModelImproved):
+class Film(BaseModel):
     """Модель данных кинопроизведения (минимальная - для главной страницы)."""
 
     uuid: UUID
