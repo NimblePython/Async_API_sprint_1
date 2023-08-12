@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from http import HTTPStatus
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from src.services.film import FilmService, get_film_service
@@ -45,4 +45,113 @@ async def film_details(film_id: str, film_service: FilmService = Depends(get_fil
         # Если бы использовалась общая модель для бизнес-логики и формирования ответов API
         # вы бы предоставляли клиентам данные, которые им не нужны 
         # и, возможно, данные, которые опасно возвращать
-    return Film(id=film.id, title=film.title) 
+    return Film(id=film.id, title=film.title)
+
+# Запросы, которые нужно уметь обрабатывать:
+
+# 1. Главная страница. На ней выводятся популярные фильмы. Пока у вас есть только один признак,
+# который можно использовать в качестве критерия популярности - imdb_rating
+
+#   GET /api/v1/films?sort=-imdb_rating&page_size=50&page_number=1
+#   [
+#   {
+#     "uuid": "uuid",
+#     "title": "str",
+#     "imdb_rating": "float"
+#   },
+#   ...
+#   ]
+
+
+@router.get("/api/v1/films")
+async def get_popular_films(
+    sort: str = Query("-imdb_rating", description="Sort by field"),
+    page_size: int = Query(50, description="Number of items per page", ge=1),
+    page_number: int = Query(1, description="Page number", ge=1),
+    film_service: FilmService = Depends(),
+):
+    valid_sort_fields = ("imdb_rating", "-imdb_rating",)
+    if sort not in valid_sort_fields:
+        raise HTTPException(status_code=400, detail="Invalid value for 'sort' parameter")
+    
+    try:
+        films = await film_service.get_popular_films(sort, page_size, page_number)
+        return films
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+# 2. Жанр и популярные фильмы в нём. Это просто фильтрация.
+
+# GET /api/v1/films?genre=<uuid:UUID>&sort=-imdb_rating&page_size=50&page_number=1
+# [
+# {
+#   "uuid": "uuid",
+#   "title": "str",
+#   "imdb_rating": "float"
+# },
+# ...
+# ]
+
+# 3. Поиск по фильмам (2.1. из т.з.)
+# GET /api/v1/films/search?query=star&page_number=1&page_size=50
+# [
+# {
+#   "uuid": "uuid",
+#   "title": "str",
+#   "imdb_rating": "float"
+# },
+# ...
+# ]
+
+# 4. Полная информация по фильму (т.з. 3.1.)
+#   http request
+# GET /api/v1/films/<uuid:UUID>/
+# {
+# "uuid": "uuid",
+# "title": "str",
+# "imdb_rating": "float",
+# "description": "str",
+# "genre": [
+#   { "uuid": "uuid", "name": "str" },
+#   ...
+# ],
+# "actors": [
+#   {
+#     "uuid": "uuid",
+#     "full_name": "str"
+#   },
+#   ...
+# ],
+# "writers": [
+#   {
+#     "uuid": "uuid",
+#     "full_name": "str"
+#   },
+#   ...
+# ],
+# "directors": [
+#   {
+#     "uuid": "uuid",
+#     "full_name": "str"
+#   },
+#   ...
+# ],
+# }
+
+# 5. Похожие фильмы. Похожесть можно оценить с помощью ElasticSearch, но цель модуля не в этом.
+# Сделаем просто: покажем фильмы того же жанра.
+# /api/v1/films?...
+
+# 6. Фильмы по персоне. (т.з. 4.2)
+# /api/v1/persons/<uuid:UUID>/film/
+
+# GET /api/v1/persons/<uuid:UUID>/film
+# [
+# {
+#   "uuid": "uuid",
+#   "title": "str",
+#   "imdb_rating": "float"
+# },
+# ...
+# ]
