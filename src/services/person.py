@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import asyncio
 import logging
 from functools import lru_cache
 from typing import Optional, List
@@ -9,7 +8,6 @@ from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
 from redis.asyncio import Redis
 
-from src.core import config
 from src.db.elastic import get_elastic
 from src.db.redis import get_redis
 from src.models.person import Person
@@ -96,28 +94,3 @@ def get_person_service(
     """Провайдер для PersonService"""
     return PersonService(redis, elastic)
 
-
-# Блок кода ниже нужен только для отладки сервиса:
-if __name__ == '__main__':
-    redis = Redis(host=config.REDIS_HOST, port=config.REDIS_PORT)
-    es = AsyncElasticsearch(
-        hosts=[{
-            'host': config.ELASTIC_HOST,
-            'port': config.ELASTIC_PORT,
-            'scheme': 'http'
-        }]
-    )
-    service = PersonService(redis=redis, elastic=es)
-
-    loop = asyncio.get_event_loop()
-
-    resulting_person = loop.run_until_complete(
-        service.get_by_id(
-            person_id='017713b9-24cf-43a6-ab62-6b5e476499b8',
-        )
-    )
-
-    loop.run_until_complete(redis.close())
-    loop.run_until_complete(es.close())
-    loop.close()
-    logger.info(resulting_person)
