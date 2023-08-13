@@ -4,7 +4,7 @@ from http import HTTPStatus
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-
+from uuid import UUID
 from src.services.film import FilmService, get_film_service
 
 # Объект router, в котором регистрируем обработчики
@@ -18,14 +18,14 @@ router = APIRouter()
 
 # Модель ответа API
 class Film(BaseModel):
-    id: str
+    uuid: UUID
     title: str
 
 
 # С помощью декоратора регистрируем обработчик film_details
 # На обработку запросов по адресу <some_prefix>/some_id
 # Позже подключим роутер к корневому роутеру 
-# И адрес запроса будет выглядеть так — /api/v1/film/some_id
+# И адрес запроса будет выглядеть так — /api/v1/films/some_id
 # В сигнатуре функции указываем тип данных, получаемый из адреса запроса (film_id: str) 
 # И указываем тип возвращаемого объекта — Film
 
@@ -45,4 +45,4 @@ async def film_details(film_id: str, film_service: FilmService = Depends(get_fil
         # Если бы использовалась общая модель для бизнес-логики и формирования ответов API
         # вы бы предоставляли клиентам данные, которые им не нужны 
         # и, возможно, данные, которые опасно возвращать
-    return Film(id=film.id, title=film.title) 
+    return Film(uuid=film.uuid, title=film.title)

@@ -2,28 +2,27 @@
 """Модуль, где определена модель кинопроизведения."""
 from typing import List, Optional
 from uuid import UUID
+from pydantic import BaseModel
 
-from src.models.base_model_improved import BaseModelImproved
 
-
-class Participant(BaseModelImproved):
+class Participant(BaseModel):
     """Модель данных персоны, участвующей в создании фильма."""
 
-    id: UUID
+    uuid: UUID
     name: str
 
 
-class FilmGenre(BaseModelImproved):
+class FilmGenre(BaseModel):
     """Модель данных жанра, к которому относится фильм."""
 
-    id: UUID
+    uuid: UUID
     name: str
 
 
-class Film(BaseModelImproved):
+class Film(BaseModel):
     """Модель данных кинопроизведения (минимальная - для главной страницы)."""
 
-    id: UUID
+    uuid: UUID
     title: str
     imdb_rating: float
 

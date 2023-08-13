@@ -8,7 +8,7 @@ from fastapi.responses import ORJSONResponse
 from redis.asyncio import Redis
 
 
-from src.api.v1 import films
+from src.api.v1 import films, persons
 from src.core import config
 from src.core.logger import LOGGING
 from src.db import elastic
@@ -34,7 +34,13 @@ async def startup():
     # Подключиться можем при работающем event-loop
     # Поэтому логика подключения происходит в асинхронной функции
     redis.redis = Redis(host=config.REDIS_HOST, port=config.REDIS_PORT)
-    elastic.es = AsyncElasticsearch(hosts=[f'{config.ELASTIC_HOST}:{config.ELASTIC_PORT}'])
+    elastic.es = AsyncElasticsearch(
+        hosts=[{
+            'host': config.ELASTIC_HOST,
+            'port': config.ELASTIC_PORT,
+            'scheme': 'http'
+        }]
+    )
 
 
 @app.on_event('shutdown')
@@ -47,6 +53,7 @@ async def shutdown():
 # Подключаем роутер к серверу, указав префикс /v1/films
 # Теги указываем для удобства навигации по документации
 app.include_router(films.router, prefix='/api/v1/films', tags=['films'])
+app.include_router(persons.router, prefix='/api/v1/persons', tags=['persons'])
 
 
 if __name__ == '__main__':
