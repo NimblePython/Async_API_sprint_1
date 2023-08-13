@@ -19,6 +19,7 @@ FILM_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
 FILM_ADAPTER = TypeAdapter(List[Film])
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 
 # FilmService содержит бизнес-логику по работе с фильмами.
@@ -82,34 +83,49 @@ class PopularFilmsService(object):
 
     # 1.2. получение страницы списка фильмов отсортированных по популярности 
     async def get_popular_films(
-        self, sort: str, page_size: int, page_number: int
+        self, desc_order: bool, page_size: int, page_number: int
     ) -> List[Film]:
-        page_cache_key = ', '.join([str(elem) for elem in (sort, page_size, page_number,)])
+        page_cache_key = ', '.join(
+            [str(elem) for elem in (int(desc_order), page_size, page_number,)],
+        )
         films_page = await self._get_popular_films_from_cache(page_cache_key)
         if not films_page:
-            films = await self._get_popular_films_from_elastic(
-                sort=sort,
+            logger.debug('No films in cache!')
+            films_page = await self._get_popular_films_from_elastic(
+                desc_order=desc_order,
                 page_size=page_size,
                 page_number=page_number,
             )
-            if not films:
+            if not films_page:
                 return None
             await self._put_popular_films_to_cache(
                 page_cache_key=page_cache_key,
-                films=films,    
+                films=films_page,    
             )
-        return films
+        else:
+            logger.debug('Got films from cache!')
+        return films_page
 
     # 2.2. получение из es страницы списка фильмов отсортированных по популярности 
     async def _get_popular_films_from_elastic(
-        self, sort, page_size, page_number,
+        self, desc_order: bool, page_size: int, page_number: int,
     ):
+        if desc_order:
+            order_name = 'desc'
+            order_mode = 'max'
+        else:
+            order_name = 'asc'
+            order_mode = 'min'
+
         search_body = {
             "size": page_size,
             "from": (page_number - 1) * page_size,
+            "sort" : [
+                {"imdb_rating" : {"order" : order_name, "mode" : order_mode}}
+            ],
         }
 
-        response = await self.elastic.search(index="movies", body=search_body, sort=sort)
+        response = await self.elastic.search(index="movies", body=search_body)
 
         popular_films = []
         for hit in response["hits"]["hits"]:
@@ -129,7 +145,7 @@ class PopularFilmsService(object):
     async def _put_popular_films_to_cache(self, page_cache_key: str, films):
         await self.redis.set(
             page_cache_key,
-            FILM_ADAPTER.validate_python(films),
+            FILM_ADAPTER.dump_json(films),
             FILM_CACHE_EXPIRE_IN_SECONDS,
         )
 
@@ -170,9 +186,17 @@ if __name__ == '__main__':
         )
     )
 
-    resulting_films = loop.run_until_complete(
+    resulting_films_desc = loop.run_until_complete(
         popular_films_service.get_popular_films(
-            sort="-imdb_rating",
+            desc_order=True,
+            page_size=10,
+            page_number=1,
+        )
+    )
+
+    resulting_films_asc = loop.run_until_complete(
+        popular_films_service.get_popular_films(
+            desc_order=False,
             page_size=10,
             page_number=1,
         )
@@ -183,5 +207,7 @@ if __name__ == '__main__':
     loop.close()
     logger.info('Single film:')
     logger.info(pformat(resulting_film))
-    logger.info('Multiple films:')
-    logger.info(pformat(resulting_films))
+    logger.info('Multiple films desc:')
+    logger.info(pformat(resulting_films_desc))
+    logger.info('Multiple films asc:')
+    logger.info(pformat(resulting_films_asc))
