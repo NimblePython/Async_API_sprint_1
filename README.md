@@ -51,11 +51,11 @@ git commit -m "feature/git не отcлеживает .env.local"
 
 **Чтобы узнать id сущностей**, выполните запрос:
 
-Для фильмов ```SELECT * FROM content.filmworks; ```
+Для фильмов ```psql -U myuser -d mydb -c "SELECT * FROM content.filmworks;" ```
 
-Для персон ```SELECT * FROM content.persons; ```
+Для персон ```psql -U myuser -d mydb -c "SELECT * FROM content.persons;" ```
 
-Для жанров ```SELECT * FROM content.genres; ```
+Для жанров ```psql -U myuser -d mydb -c "SELECT * FROM content.genres;" ```
 
 ## Работа с ETL
 **Общее описание работы**
