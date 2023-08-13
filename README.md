@@ -2,7 +2,7 @@
 
 **Важное сообщение для тимлида:** для ускорения проверки проекта укажите ссылку на приватный репозиторий с командной работой в файле readme и отправьте свежее приглашение на аккаунт [BlueDeep](https://github.com/BigDeepBlue).
 
- DONE: Ссылка на этот репозиторий: [ТУТ] (https://github.com/NimblePython/Async_API_sprint_1)
+ DONE: Ссылка на этот репозиторий: (https://github.com/NimblePython/Async_API_sprint_1)
 
  DONE: Приглашение BlueDeep отправлено
 
