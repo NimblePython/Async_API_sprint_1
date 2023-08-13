@@ -85,13 +85,20 @@ class PopularFilmsService(object):
 
     # 1.2. получение страницы списка фильмов отсортированных по популярности 
     async def get_popular_films(
-        self, desc_order: bool, page_size: int, page_number: int, genre: Optional[UUID]=None,
+        self,
+        desc_order: bool,
+        page_size: int,
+        page_number: int,
+        genre: Optional[UUID]=None,
+        similar: Optional[UUID]=None,
     ) -> List[Film]:
         
         # создаём ключ для кэша
         params_to_cache = [int(desc_order), page_size, page_number]
         if genre is not None:
             params_to_cache.append(genre)
+        if similar is not None:
+            params_to_cache.append(similar)
         page_cache_key = ', '.join(
             [str(elem) for elem in params_to_cache],
         )
@@ -106,6 +113,7 @@ class PopularFilmsService(object):
                 page_size=page_size,
                 page_number=page_number,
                 genre=genre,
+                similar=similar,
             )
             if not films_page:
                 return None
@@ -121,7 +129,12 @@ class PopularFilmsService(object):
 
     # 2.2. получение из es страницы списка фильмов отсортированных по популярности 
     async def _get_popular_films_from_elastic(
-        self, desc_order: bool, page_size: int, page_number: int, genre: Optional[UUID]=None
+        self,
+        desc_order: bool,
+        page_size: int,
+        page_number: int,
+        genre: Optional[UUID]=None,
+        similar: Optional[UUID]=None,
     ):
         if desc_order:
             order_name = 'desc'
@@ -137,6 +150,9 @@ class PopularFilmsService(object):
                 {"imdb_rating" : {"order" : order_name, "mode" : order_mode}}
             ],
         }
+
+        # TODO: D.R.Y. код вспомогательных запросов (по жанру и по жанрам похожего фильма):
+        # находим название указанного жанра:
         if genre is not None:
             genre_search_body = {
                 'query':{
@@ -147,11 +163,39 @@ class PopularFilmsService(object):
                     }
                 }
             }
+            # TODO: body - устаревший параметр, заменить отдельными параметрами
             genre_response = await self.elastic.search(index="genres", body=genre_search_body)
             genres = []
             for hit in genre_response["hits"]["hits"]:
                 genres.append(FilmGenre(**hit["_source"]))
             genre_names = [genre.name for genre in genres]
+            logger.debug('genres: %s' % (', '.join(genre_names)))
+            search_body['query'] = {
+                "bool": {
+                    "filter": [
+                        {"terms": {"genre": genre_names}},
+                    ]
+                }
+            }
+
+        # находим названия жанров, фильма указанного как похожий
+        if similar is not None:
+            similar_search_body = {
+                'query':{
+                    "bool": {
+                        "filter": [
+                            {"term": {"uuid": genre}}
+                        ]
+                    }
+                }
+            }
+            similar_response = await self.elastic.search(index="movies", body=similar_search_body)
+            similar_films = []
+            for hit in similar_response["hits"]["hits"]:
+                similar_films.append(FilmDetailed(**hit["_source"]))
+            genre_names = [similar_film.genre for similar_film in similar_films]
+            if genre_names:
+                genre_names = genre_names[0]
             logger.debug('genres: %s' % (', '.join(genre_names)))
             search_body['query'] = {
                 "bool": {
