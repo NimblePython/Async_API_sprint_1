@@ -44,8 +44,7 @@ git commit -m "feature/git не отcлеживает .env.local"
 ```
 
 ## Тестирование API
-Чтобы убедиться в работе сервисов достаточно запустить тесты из файлов
-1) ```ETLTests.postman_collection.json```
-и 
-2) ```FastAPI.postman_collection.json`` 
-в приложении Postman.
+Чтобы убедиться в работе сервисов достаточно запустить в приложении Postman тесты из файлов:
+- ```ETLTests.postman_collection.json```
+- ```FastAPI.postman_collection.json``` 
+
