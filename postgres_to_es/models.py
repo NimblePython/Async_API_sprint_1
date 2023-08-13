@@ -40,6 +40,7 @@ class PersonModel(PersonMixin):
 class GenreModel(BaseModel):
     uuid: UUID
     name: str
+    description: Optional[str] = None
 
 
 @dataclass
