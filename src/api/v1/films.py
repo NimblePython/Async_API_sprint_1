@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from http import HTTPStatus
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -62,9 +63,21 @@ async def film_details(film_id: str, film_service: FilmService = Depends(get_fil
 #   ...
 #   ]
 
+# 2. Жанр и популярные фильмы в нём. Это просто фильтрация.
+
+# GET /api/v1/films?genre=<uuid:UUID>&sort=-imdb_rating&page_size=50&page_number=1
+# [
+# {
+#   "uuid": "uuid",
+#   "title": "str",
+#   "imdb_rating": "float"
+# },
+# ...
+# ]
 
 @router.get("/api/v1/films")
 async def get_popular_films(
+    genre: Optional[UUID] = Query(None, description="Get films of given genres"),
     sort: str = Query("-imdb_rating", description="Sort by field"),
     page_size: int = Query(50, description="Number of items per page", ge=1),
     page_number: int = Query(1, description="Page number", ge=1),
@@ -78,6 +91,7 @@ async def get_popular_films(
     
     try:
         films = await film_service.get_popular_films(
+            genre=genre,
             desc_order=desc,
             page_size=page_size,
             page_number=page_number,
@@ -87,17 +101,7 @@ async def get_popular_films(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-# 2. Жанр и популярные фильмы в нём. Это просто фильтрация.
 
-# GET /api/v1/films?genre=<uuid:UUID>&sort=-imdb_rating&page_size=50&page_number=1
-# [
-# {
-#   "uuid": "uuid",
-#   "title": "str",
-#   "imdb_rating": "float"
-# },
-# ...
-# ]
 
 # 3. Поиск по фильмам (2.1. из т.з.)
 # GET /api/v1/films/search?query=star&page_number=1&page_size=50
