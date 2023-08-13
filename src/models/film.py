@@ -31,8 +31,7 @@ class Film(BaseModel):
 class FilmDetailed(Film):
     """Схема данных подробностей о кинопроизведении."""
 
-    genre: Optional[List[FilmGenre]]  # TODO: уточнить, т.к.
-    # в прошлом спринте у меня здесь был просто str
+    genre: Optional[List[str]]
     description: Optional[str]
     director: Optional[List[str]]
     actors_names: Optional[List[str]]
