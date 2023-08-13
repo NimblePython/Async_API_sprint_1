@@ -50,8 +50,11 @@ git commit -m "feature/git не отcлеживает .env.local"
 Замените uuid запросов на актуальные uuid из своей БД
 
 **Чтобы узнать id сущностей**, выполните запрос:
+
 Для фильмов ```SELECT * FROM content.filmworks; ```
+
 Для персон ```SELECT * FROM content.persons; ```
+
 Для жанров ```SELECT * FROM content.genres; ```
 
 ## Работа с ETL
