@@ -64,7 +64,8 @@ git commit -m "feature/git не отcлеживает .env.local"
 Чтобы убедиться в работе сервисов достаточно запустить в приложении Postman тесты из файлов:
 - ```ETLTests.postman_collection.json```
 - ```FastAPI.postman_collection.json```
-Замените uuid запросов на актуальные uuid из своей БД
+
+**Внимание!** Замените uuid запросов на актуальные uuid из своей БД
 
 **Чтобы узнать id сущностей**, выполните запрос:
 
