@@ -1,0 +1,186 @@
+{
+	"info": {
+		"_postman_id": "7b099b88-de6d-4260-b7b0-cae172b96b04",
+		"name": "FastAPI",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "28623661"
+	},
+	"item": [
+		{
+			"name": "Movies API. Данные по фильму",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{service_url}}/api/v1/persons/017713b9-24cf-43a6-ab62-6b5e476499b8/",
+					"host": [
+						"{{service_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"persons",
+						"017713b9-24cf-43a6-ab62-6b5e476499b8",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Persons API. Поиск персон с именем query='Rod' с учетом пагинатора (1-ая страница, 50 персон на экране)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{service_url}}/api/v1/persons/search?query=georg&page_number=2&page_size=10",
+					"host": [
+						"{{service_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"persons",
+						"search"
+					],
+					"query": [
+						{
+							"key": "query",
+							"value": "georg"
+						},
+						{
+							"key": "page_number",
+							"value": "2"
+						},
+						{
+							"key": "page_size",
+							"value": "10"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Persons API. Данные по персоне",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{service_url}}/api/v1/persons/017713b9-24cf-43a6-ab62-6b5e476499b8/",
+					"host": [
+						"{{service_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"persons",
+						"017713b9-24cf-43a6-ab62-6b5e476499b8",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Persons API. Фильмы по персоне",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{service_url}}/api/v1/persons/017713b9-24cf-43a6-ab62-6b5e476499b8/film/",
+					"host": [
+						"{{service_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"persons",
+						"017713b9-24cf-43a6-ab62-6b5e476499b8",
+						"film",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Genres API. Данные по жанру",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{service_url}}/api/v1/genres/b92ef010-5e4c-4fd0-99d6-41b6456272cd",
+					"host": [
+						"{{service_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"genres",
+						"b92ef010-5e4c-4fd0-99d6-41b6456272cd"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Запроc индекса Persons",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/persons/_mapping?pretty",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"persons",
+						"_mapping"
+					],
+					"query": [
+						{
+							"key": "pretty",
+							"value": null
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Запроc индекса Genres",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/genres/_mapping?pretty",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"genres",
+						"_mapping"
+					],
+					"query": [
+						{
+							"key": "pretty",
+							"value": null
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "service_url",
+			"value": "http://0.0.0.0:8000"
+		},
+		{
+			"key": "base_url",
+			"value": "http://127.0.0.1:9200"
+		}
+	]
+}
