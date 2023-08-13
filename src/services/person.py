@@ -2,7 +2,7 @@
 import asyncio
 import logging
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, List
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
 
@@ -12,11 +12,9 @@ from redis.asyncio import Redis
 from src.core import config
 from src.db.elastic import get_elastic
 from src.db.redis import get_redis
-from src.models.film import Film
 from src.models.person import Person
-from src.services.film import FilmService, get_film_service
 
-PERSON_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 300 cекунд (5 минут)
+PERSON_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 300 сек (5 минут)
 
 
 logger = logging.getLogger(__name__)
@@ -31,8 +29,26 @@ class PersonService(object):
         self.redis = redis
         self.elastic = elastic
 
-    # get_by_id возвращает объект - Персонаж. Он опционален, так как Персонаж может отсутствовать в базе
+    async def search_person(self,
+                            query: str,
+                            page_number: int,
+                            page_size: int) -> List[Person]:
+        search_results = await self.elastic.search(
+            index="persons",
+            body={
+                "query": {"match": {"full_name": query}},
+                "from": (page_number - 1) * page_size,
+                "size": page_size
+            }
+        )
+        persons = [Person(**hit['_source']) for hit in search_results['hits']['hits']]
+        return persons
+
     async def get_by_id(self, person_id: str) -> Optional[Person]:
+        """Возвращает Персонаж по его UUID из ES.
+        Возвращаемый параметр опционален, так как Персонаж может отсутствовать в БД
+        """
+
         # Пытаемся получить данные из кеша, потому что оно работает быстрее
         person = await self._person_from_cache(person_id)
         if not person:
@@ -64,22 +80,20 @@ class PersonService(object):
         return Person.model_validate_json(person_data)  # возвращаем десериализованный объект Person
 
     async def _put_person_to_cache(self, person: Person):
-        # Сохраняем данные о персоне, используя команду set
-        # Выставляем время жизни кеша — 5 минут
-        # https://redis.io/commands/set/
-        # pydantic позволяет сериализовать модель в json
+        """Сохраняет данные о персоне, используя команду set
+        """
         await self.redis.set(str(person.uuid), person.model_dump_json(), PERSON_CACHE_EXPIRE_IN_SECONDS)
 
 
-# get_person_service — это провайдер PersonService.
 # С помощью Depends он сообщает, что ему необходимы Redis и Elasticsearch
 # Для их получения вы ранее создали функции-провайдеры в модуле db
-# Используем lru_cache-декоратор, чтобы создать объект сервиса в едином экземпляре (синглтона)
+# используем lru_cache-декоратор, чтобы создать объект сервиса в едином экземпляре (синглтона)
 @lru_cache()
 def get_person_service(
     redis: Redis = Depends(get_redis),
     elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> PersonService:
+    """Провайдер для PersonService"""
     return PersonService(redis, elastic)
 
 
