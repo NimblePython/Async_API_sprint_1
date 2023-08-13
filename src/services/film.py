@@ -212,7 +212,6 @@ if __name__ == '__main__':
     es = AsyncElasticsearch(hosts=[f'http://{config.ELASTIC_HOST}:{config.ELASTIC_PORT}'])
     service = FilmService(redis=redis, elastic=es)
     popular_films_service = PopularFilmsService(redis=redis, elastic=es)
-    films_service = PopularFilmsService
 
     loop = asyncio.get_event_loop()
 
