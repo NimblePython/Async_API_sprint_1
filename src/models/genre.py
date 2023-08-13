@@ -3,6 +3,8 @@
 from uuid import UUID
 
 from pydantic import BaseModel
+from typing import Optional
+
 
 
 class Genre(BaseModel):
@@ -10,4 +12,4 @@ class Genre(BaseModel):
 
     uuid: UUID
     name: str
-    description: str
+    description: Optional[str] = None

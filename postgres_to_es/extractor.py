@@ -150,16 +150,13 @@ class Extractor:
                     SELECT row_to_json(info) as view
                     FROM (      
                         SELECT 
-                            DISTINCT fw.id uuid,
-                            g."name"
+                            g.id uuid,
+                            g."name",
+                            g.description
                         FROM 
-                            content.film_work fw,
                             content.genre g
-                            LEFT JOIN content.genre_film_work gfw ON gfw.genre_id = g.id
                         WHERE
-                            gfw.genre_id in ({', '.join(f"'{el}'" for el in entities)})
-                        AND
-                            gfw.film_work_id = fw.id
+                            g.id in ({', '.join(f"'{el}'" for el in entities)})
                         LIMIT {self.chunk}
                     ) info;
                 """
@@ -229,8 +226,8 @@ class Extractor:
         while is_run:
             objects: list[Schema] = []
 
-            logging.info(f"Настраиваемая пауза длительностью {self.pause} сек.")
-            time.sleep(self.pause)  # пауза между сессиями сриннинга БД
+            logging.info(f"Пауза {self.pause} сек.")
+            time.sleep(self.pause)  # пауза между сессиями сканирования БД
 
             data = self.get_key_value(Extractor.PERSON_MODIFIED_KEY)
             objects.append(Schema('person', FilmworkModel, Extractor.PERSON_MODIFIED_KEY, data, 'movies'))
@@ -263,7 +260,7 @@ class Extractor:
                         cur_model.modified, changed_entities = self.get_date_from_chunk_and_cut(changed_entities)
 
                         if changed_entities:
-                            # готовим CHUNK фильмов связанных с изменениями и отправляем в ES в соотв. индекс
+                            # Готовим данные связанные с изменениями и отправляем в ES в соответствующий индекс
                             if cur_model.es_index == 'movies':
                                 self.get_films_and_send_to_es(cur_model, changed_entities)
                             else:

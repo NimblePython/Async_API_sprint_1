@@ -154,6 +154,10 @@ class Load:
             "name": {
                 "type": "text",
                 "analyzer": "ru_en"
+            },
+            "description": {
+                "type": "text",
+                "analyzer": "ru_en"
             }
         }
     }
