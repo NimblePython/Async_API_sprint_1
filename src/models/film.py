@@ -10,7 +10,7 @@ class Participant(BaseModel):
     """Модель данных персоны, участвующей в создании фильма."""
 
     uuid: UUID
-    name: str
+    full_name: str
 
 
 class FilmGenre(BaseModel):
