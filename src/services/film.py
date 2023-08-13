@@ -4,6 +4,7 @@ import logging
 from functools import lru_cache
 from pprint import pformat
 from typing import List, Optional
+from uuid import UUID
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
@@ -13,7 +14,7 @@ from redis.asyncio import Redis
 from src.core import config
 from src.db.elastic import es, get_elastic
 from src.db.redis import get_redis, redis
-from src.models.film import Film
+from src.models.film import Film, FilmDetailed, FilmGenre
 
 FILM_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
 FILM_ADAPTER = TypeAdapter(List[Film])
@@ -53,7 +54,8 @@ class FilmService(object):
             doc = await self.elastic.get(index='movies', id=film_id)
         except NotFoundError:
             return None
-        return Film(**doc['_source'])
+        logger.debug(pformat(doc['_source']))
+        return FilmDetailed(**doc['_source'])
 
 
     # 3.1. получение фильма из кэша по uuid
@@ -65,7 +67,7 @@ class FilmService(object):
             return None
 
         # pydantic предоставляет удобное API для создания объекта моделей из json
-        return Film.model_validate_json(film_data)  # возвращаем десериализованный объект Film
+        return FilmDetailed.model_validate_json(film_data)  # возвращаем десериализованный объект Film
 
     # 4.1. сохранение фильма в кэш по id:
     async def _put_film_to_cache(self, film: Film):
@@ -83,7 +85,7 @@ class PopularFilmsService(object):
 
     # 1.2. получение страницы списка фильмов отсортированных по популярности 
     async def get_popular_films(
-        self, desc_order: bool, page_size: int, page_number: int
+        self, desc_order: bool, page_size: int, page_number: int, genre: Optional[UUID]
     ) -> List[Film]:
         page_cache_key = ', '.join(
             [str(elem) for elem in (int(desc_order), page_size, page_number,)],
@@ -108,7 +110,7 @@ class PopularFilmsService(object):
 
     # 2.2. получение из es страницы списка фильмов отсортированных по популярности 
     async def _get_popular_films_from_elastic(
-        self, desc_order: bool, page_size: int, page_number: int,
+        self, genre: Optional[UUID], desc_order: bool, page_size: int, page_number: int,
     ):
         if desc_order:
             order_name = 'desc'
@@ -124,6 +126,29 @@ class PopularFilmsService(object):
                 {"imdb_rating" : {"order" : order_name, "mode" : order_mode}}
             ],
         }
+        if genre is not None:
+            genre_search_body = {
+                'query':{
+                    "bool": {
+                        "filter": [
+                            {"term": {"uuid": genre}}
+                        ]
+                    }
+                }
+            }
+            genre_response = await self.elastic.search(index="genre", body=genre_search_body)
+            genres = []
+            for hit in genre_response["hits"]["hits"]:
+                genres.append(FilmGenre(**hit["_source"]))
+            
+            search_body['query'] = {
+                "bool": {
+                    "filter": [
+                        {"terms": {"genre": [genre.name for genre in genres]}}
+                    ]
+                }
+            }
+
 
         response = await self.elastic.search(index="movies", body=search_body)
 
@@ -182,7 +207,7 @@ if __name__ == '__main__':
 
     resulting_film = loop.run_until_complete(
         service.get_by_uuid(
-            film_uuid='ac58403b-7070-4dcc-8e53-fa2d2d2284ab',
+            film_uuid='a9bbc1d8-bb8a-41d2-b61a-d8ddc9b31ede',
         )
     )
 
