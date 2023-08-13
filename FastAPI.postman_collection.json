@@ -12,14 +12,14 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{service_url}}/api/v1/persons/017713b9-24cf-43a6-ab62-6b5e476499b8/",
+					"raw": "{{service_url}}/api/v1/films/017713b9-24cf-43a6-ab62-6b5e476499b8/",
 					"host": [
 						"{{service_url}}"
 					],
 					"path": [
 						"api",
 						"v1",
-						"persons",
+						"films",
 						"017713b9-24cf-43a6-ab62-6b5e476499b8",
 						""
 					]
