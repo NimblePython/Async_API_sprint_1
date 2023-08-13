@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 from http import HTTPStatus
 from typing import Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from uuid import UUID
+
+from src.models.film import Film, FilmDetailed
 from src.services.film import FilmService, get_film_service
 
 # Объект router, в котором регистрируем обработчики
@@ -17,12 +19,6 @@ router = APIRouter()
 # Также она основана на дата-классах
 
 
-# Модель ответа API
-class Film(BaseModel):
-    uuid: UUID
-    title: str
-
-
 # С помощью декоратора регистрируем обработчик film_details
 # На обработку запросов по адресу <some_prefix>/some_id
 # Позже подключим роутер к корневому роутеру 
@@ -30,9 +26,13 @@ class Film(BaseModel):
 # В сигнатуре функции указываем тип данных, получаемый из адреса запроса (film_id: str) 
 # И указываем тип возвращаемого объекта — Film
 
+# 4. Полная информация по фильму (т.з. 3.1.)
+
 # Внедряем FilmService с помощью Depends(get_film_service)
-@router.get('/{film_id}', response_model=Film)
-async def film_details(film_id: str, film_service: FilmService = Depends(get_film_service)) -> Film:
+@router.get('/{film_id}', response_model=FilmDetailed)
+async def film_details(
+    film_id: str, film_service: FilmService = Depends(get_film_service),
+) -> FilmDetailed:
     film = await film_service.get_by_id(film_id)
     if not film:
         # Если фильм не найден, отдаём 404 статус
@@ -46,37 +46,20 @@ async def film_details(film_id: str, film_service: FilmService = Depends(get_fil
         # Если бы использовалась общая модель для бизнес-логики и формирования ответов API
         # вы бы предоставляли клиентам данные, которые им не нужны 
         # и, возможно, данные, которые опасно возвращать
-    return Film(id=film.id, title=film.title)
+    return FilmDetailed(id=film.id, title=film.title)
 
-# Запросы, которые нужно уметь обрабатывать:
 
 # 1. Главная страница. На ней выводятся популярные фильмы. Пока у вас есть только один признак,
 # который можно использовать в качестве критерия популярности - imdb_rating
-
 #   GET /api/v1/films?sort=-imdb_rating&page_size=50&page_number=1
-#   [
-#   {
-#     "uuid": "uuid",
-#     "title": "str",
-#     "imdb_rating": "float"
-#   },
-#   ...
-#   ]
 
 # 2. Жанр и популярные фильмы в нём. Это просто фильтрация.
-
 # GET /api/v1/films?genre=<uuid:UUID>&sort=-imdb_rating&page_size=50&page_number=1
-# [
-# {
-#   "uuid": "uuid",
-#   "title": "str",
-#   "imdb_rating": "float"
-# },
-# ...
-# ]
+
 
 @router.get("/api/v1/films")
 async def get_popular_films(
+    similar: Optional[UUID] = Query(None, description="Get films of same genre as similar"),
     genre: Optional[UUID] = Query(None, description="Get films of given genres"),
     sort: str = Query("-imdb_rating", description="Sort by field"),
     page_size: int = Query(50, description="Number of items per page", ge=1),
@@ -91,6 +74,7 @@ async def get_popular_films(
     
     try:
         films = await film_service.get_popular_films(
+            similar=similar,
             genre=genre,
             desc_order=desc,
             page_size=page_size,
@@ -114,54 +98,11 @@ async def get_popular_films(
 # ...
 # ]
 
-# 4. Полная информация по фильму (т.з. 3.1.)
-#   http request
-# GET /api/v1/films/<uuid:UUID>/
-# {
-# "uuid": "uuid",
-# "title": "str",
-# "imdb_rating": "float",
-# "description": "str",
-# "genre": [
-#   { "uuid": "uuid", "name": "str" },
-#   ...
-# ],
-# "actors": [
-#   {
-#     "uuid": "uuid",
-#     "full_name": "str"
-#   },
-#   ...
-# ],
-# "writers": [
-#   {
-#     "uuid": "uuid",
-#     "full_name": "str"
-#   },
-#   ...
-# ],
-# "directors": [
-#   {
-#     "uuid": "uuid",
-#     "full_name": "str"
-#   },
-#   ...
-# ],
-# }
+
+
 
 # 5. Похожие фильмы. Похожесть можно оценить с помощью ElasticSearch, но цель модуля не в этом.
 # Сделаем просто: покажем фильмы того же жанра.
 # /api/v1/films?...
 
-# 6. Фильмы по персоне. (т.з. 4.2)
-# /api/v1/persons/<uuid:UUID>/film/
-
-# GET /api/v1/persons/<uuid:UUID>/film
-# [
-# {
-#   "uuid": "uuid",
-#   "title": "str",
-#   "imdb_rating": "float"
-# },
-# ...
-# ]
+# в основном эндпойнте с использованием параметра similar
