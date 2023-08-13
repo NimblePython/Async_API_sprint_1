@@ -19,3 +19,10 @@ class Person(BaseModel):
     uuid: UUID
     full_name: str
     films: Optional[List[PortfolioFilm]]
+
+
+class PersonSearchQuery(BaseModel):
+    """Модель параметров запроса при поиске персон."""
+    query: str
+    page_number: int = 1
+    page_size: int = 50
