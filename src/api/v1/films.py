@@ -74,8 +74,14 @@ async def get_popular_films(
     if sort not in valid_sort_fields:
         raise HTTPException(status_code=400, detail="Invalid value for 'sort' parameter")
     
+    desc = sort[0] == '-'
+    
     try:
-        films = await film_service.get_popular_films(sort, page_size, page_number)
+        films = await film_service.get_popular_films(
+            desc_order=desc,
+            page_size=page_size,
+            page_number=page_number,
+        )
         return films
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal Server Error")
