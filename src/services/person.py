@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 import logging
+import json
+
 from functools import lru_cache
 from typing import Optional, List
+from pydantic import TypeAdapter
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
 
@@ -17,6 +20,8 @@ PERSON_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 300 сек (5 минут)
 
 logger = logging.getLogger(__name__)
 
+PERSON_SEARCH_ADAPTER = TypeAdapter(List[Person])
+
 
 # PersonService содержит бизнес-логику по работе с персоналиями.
 class PersonService(object):
@@ -30,16 +35,28 @@ class PersonService(object):
     async def search_person(self,
                             query: str,
                             page_number: int,
-                            page_size: int) -> List[Person]:
-        search_results = await self.elastic.search(
-            index="persons",
-            body={
-                "query": {"match": {"full_name": query}},
-                "from": (page_number - 1) * page_size,
-                "size": page_size
-            }
-        )
-        persons = [Person(**hit['_source']) for hit in search_results['hits']['hits']]
+                            page_size: int) -> List[Person] | None:
+
+        # Пытаемся получить данные из кеша
+        cache_key = f"{query}:{page_number}:{page_size}"
+        persons = await self._person_search_from_cache(cache_key)
+        if not persons:
+            # Если данных нет в кеше, то ищем его в Elasticsearch
+            search_results = await self.elastic.search(
+                index="persons",
+                body={
+                    "query": {"match": {"full_name": query}},
+                    "from": (page_number - 1) * page_size,
+                    "size": page_size
+                }
+            )
+            persons = [Person(**hit['_source']) for hit in search_results['hits']['hits']]
+            if not persons:
+                # Если он отсутствует в Elasticsearch, значит, персонажа такого вообще нет в базе
+                return None
+            # Сохраняем поиск по персонажу в кеш
+            await self._put_person_search_to_cache(cache_key, persons)
+
         return persons
 
     async def get_by_id(self, person_id: str) -> Optional[Person]:
@@ -69,7 +86,6 @@ class PersonService(object):
 
     async def _person_from_cache(self, person_id: str) -> Optional[Person]:
         # Пытаемся получить данные о персоне из кеша, используя команду get
-        # https://redis.io/commands/get/
         person_data = await self.redis.get(person_id)
         if not person_data:
             return None
@@ -81,6 +97,31 @@ class PersonService(object):
         """Сохраняет данные о персоне, используя команду set
         """
         await self.redis.set(str(person.uuid), person.model_dump_json(), PERSON_CACHE_EXPIRE_IN_SECONDS)
+
+    async def _person_search_from_cache(self, cache_key: str) -> List[Person] | None:
+        """
+        Ищет информацию в кеше Redis
+
+        :param cache_key: ключ кеша - `запрос:номер_страницы:число_элементов`
+        :return: возвращаем десериализованный объект List[Person] или None
+        """
+        # Пытаемся получить данные о персоне из кеша, используя команду get
+        serialized_search_person_data = await self.redis.get(cache_key)
+        if not serialized_search_person_data:
+            return None
+
+        # pydantic предоставляет удобное API для создания объекта моделей из json
+        return PERSON_SEARCH_ADAPTER.validate_json(serialized_search_person_data)
+
+    async def _put_person_search_to_cache(self, cache_key: str, persons: List[Person]):
+        """Сохраняет результат поиска, используя команду set
+        """
+
+        await self.redis.set(
+            cache_key,
+            PERSON_SEARCH_ADAPTER.dump_json(persons),
+            PERSON_CACHE_EXPIRE_IN_SECONDS
+        )
 
 
 # С помощью Depends он сообщает, что ему необходимы Redis и Elasticsearch
