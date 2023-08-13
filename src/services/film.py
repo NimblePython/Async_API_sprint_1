@@ -85,14 +85,22 @@ class PopularFilmsService(object):
 
     # 1.2. получение страницы списка фильмов отсортированных по популярности 
     async def get_popular_films(
-        self, desc_order: bool, page_size: int, page_number: int, genre: Optional[UUID]
+        self, desc_order: bool, page_size: int, page_number: int, genre: Optional[UUID]=None,
     ) -> List[Film]:
+        
+        # создаём ключ для кэша
+        params_to_cache = [int(desc_order), page_size, page_number]
+        if genre is not None:
+            params_to_cache.append(genre)
         page_cache_key = ', '.join(
-            [str(elem) for elem in (int(desc_order), page_size, page_number,)],
+            [str(elem) for elem in params_to_cache],
         )
+
+        # запрашиваем ключ в кэше
         films_page = await self._get_popular_films_from_cache(page_cache_key)
         if not films_page:
             logger.debug('No films in cache!')
+            # если в кэше нет значения по этому ключу, делаем запрос в es
             films_page = await self._get_popular_films_from_elastic(
                 desc_order=desc_order,
                 page_size=page_size,
@@ -101,6 +109,8 @@ class PopularFilmsService(object):
             )
             if not films_page:
                 return None
+            
+            # если результат не пуст - сохраняем его в кэш по ключу
             await self._put_popular_films_to_cache(
                 page_cache_key=page_cache_key,
                 films=films_page,    
