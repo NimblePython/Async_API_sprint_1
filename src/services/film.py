@@ -97,6 +97,7 @@ class PopularFilmsService(object):
                 desc_order=desc_order,
                 page_size=page_size,
                 page_number=page_number,
+                genre=genre,
             )
             if not films_page:
                 return None
@@ -110,7 +111,7 @@ class PopularFilmsService(object):
 
     # 2.2. получение из es страницы списка фильмов отсортированных по популярности 
     async def _get_popular_films_from_elastic(
-        self, genre: Optional[UUID], desc_order: bool, page_size: int, page_number: int,
+        self, desc_order: bool, page_size: int, page_number: int, genre: Optional[UUID]=None
     ):
         if desc_order:
             order_name = 'desc'
@@ -136,19 +137,19 @@ class PopularFilmsService(object):
                     }
                 }
             }
-            genre_response = await self.elastic.search(index="genre", body=genre_search_body)
+            genre_response = await self.elastic.search(index="genres", body=genre_search_body)
             genres = []
             for hit in genre_response["hits"]["hits"]:
                 genres.append(FilmGenre(**hit["_source"]))
-            
+            genre_names = [genre.name for genre in genres]
+            logger.debug('genres: %s' % (', '.join(genre_names)))
             search_body['query'] = {
                 "bool": {
                     "filter": [
-                        {"terms": {"genre": [genre.name for genre in genres]}}
+                        {"terms": {"genre": genre_names}},
                     ]
                 }
             }
-
 
         response = await self.elastic.search(index="movies", body=search_body)
 
@@ -227,6 +228,16 @@ if __name__ == '__main__':
         )
     )
 
+    genre_uuid='49a81ffc-1670-4dcd-bbec-e224064cf99c'
+    resulting_films_of_genre_desc = loop.run_until_complete(
+        popular_films_service.get_popular_films(
+            genre=genre_uuid,
+            desc_order=True,
+            page_size=10,
+            page_number=1,
+        )
+    )
+
     loop.run_until_complete(redis.close())
     loop.run_until_complete(es.close())
     loop.close()
@@ -236,3 +247,5 @@ if __name__ == '__main__':
     logger.info(pformat(resulting_films_desc))
     logger.info('Multiple films asc:')
     logger.info(pformat(resulting_films_asc))
+    logger.info('Multiple films desc(of genre):')
+    logger.info(pformat(resulting_films_of_genre_desc))
