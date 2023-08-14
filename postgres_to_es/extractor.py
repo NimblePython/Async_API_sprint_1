@@ -1,6 +1,6 @@
 """
 Модуль для считывания данных из источника.
-Источниик - БД в PostgreSQL.
+Источник - БД в 'PostgreSQL'.
 """
 import logging
 import time
@@ -29,10 +29,10 @@ class LoggingCursor(pg_extensions.cursor):
 
 
 class Extractor:
-    # ключ отслеживающий дату последнего перcонажа, записанного в ЭС вместе со всеми его фильмами в индексе: movies
+    # ключ - дата персонажа, успешно записанного в ЭС вместе со всеми его фильмами в индексе: movies
     PERSON_MODIFIED_KEY = '_pers_modified'
 
-    # ключ отслеживающий дату жанра, успешно записанного в ЭС вмсете со всеми фильмами этого жанра в индексе: movies
+    # ключ - дата жанра, успешно записанного в ЭС вместе со всеми его фильмами в индексе: movies
     GENRE_MODIFIED_KEY = '_gen_modified'
 
     # ключ отслеживающий дату фильма, в котором произошли изменения и успешно записанного в ЭС в индекс: movies
@@ -63,6 +63,7 @@ class Extractor:
         self.fetch_size = 100
 
         # значения из settings.ini если они там заданы, иначе - по умолчанию
+        # TODO: Поменять на рydantic config
         config = configparser.ConfigParser()  # создаём объект парсера конфига
         config.read('settings.ini')
         self.chunk = int(config['Extractor']['chunk_size'])
@@ -112,6 +113,7 @@ class Extractor:
         return date, chunk
 
     def get_data_and_send_to_es(self, model: Schema, entities: list):
+        query = ""
         if model.table == 'person':
             query = \
                 f"""
@@ -164,18 +166,18 @@ class Extractor:
         with self.conn.cursor() as cur:
             # запрашиваем CHUNK данных, которые связаны с изменениями
             cur = self.query_exec(cur, query)
-            # готовим fetch_size кусок UUIN фильмов для пушинга в ES
+            # готовим fetch_size кусок UUIN фильмов для ES
             while records := cur.fetchmany(self.fetch_size):
                 data_to_elastic = [model.model(**record['view']) for record in records]
-                logging.info(f'Вызван для таблицы {model.table} --- Данные собраны для пушинга в индекс ES: {model.es_index}')
+                logging.info(f'Вызван для таблицы {model.table}. Данные собраны для индекса ES: {model.es_index}')
                 try:
                     # пушим в ES
                     self.push_to_es(data_to_elastic, es_index=model.es_index)
-                    # Если запись прошла успешно то меняем статус
+                    # Если запись прошла успешно, то меняем статус
                     if Extractor.cnt_part_load == Extractor.cnt_successes:
-                        # Изменяем сотояние (дату) для модели от имени которой произошел вызов функции
+                        # Изменяем состояние (дату) для модели от имени которой произошел вызов функции
                         self.manager.set_state(model.key, model.modified)
-                        logging.info(f"Изменено сотояние для ключа {model.key} в значение {model.modified}")
+                        logging.info(f"Изменено состояние для ключа {model.key} в значение {model.modified}")
                 except Exception as e:
                     logging.exception('%s: %s' % (e.__class__.__name__, e))
 
@@ -205,18 +207,18 @@ class Extractor:
         with self.conn.cursor() as cur_films:
             # запрашиваем CHUNK фильмов, которое связано с изменениями
             cur_films = self.query_exec(cur_films, query)
-            # готовим fetch_size кусок UUIN фильмов для пушинга в ES
+            # готовим fetch_size кусок UUIN фильмов для ES
             while films := cur_films.fetchmany(self.fetch_size):
                 self.films_to_es = [record[0] for record in films]
                 logging.debug(f'Вызван для {model.table} --- Фильмы собраны для ES:')
                 try:
                     # запуск обогатителя: добавит недостающую информацию и запишет в ES
                     self.postgres_enricher()
-                    # Если запись прошла успешно то меняем статус
+                    # Если запись прошла успешно, то меняем статус
                     if Extractor.cnt_part_load == Extractor.cnt_successes:
-                        # Изменяем сотояние (дату) для модели от имени которой произошел вызов функции
+                        # Изменяем состояние (дату) для модели от имени которой произошел вызов функции
                         self.manager.set_state(model.key, model.modified)
-                        logging.info(f"Изменено сотояние для ключа {model.key} в значение {model.modified}")
+                        logging.info(f"Изменено состояние для ключа {model.key} в значение {model.modified}")
                 except Exception as e:
                     logging.exception('%s: %s' % (e.__class__.__name__, e))
 
@@ -256,7 +258,7 @@ class Extractor:
                     while records := cur.fetchmany(self.fetch_size):
                         # формируем (кусочек) UUIN сущностей
                         changed_entities = [record for record in records]
-                        # запомним дату пследнего из fetch_size для изменения статуса
+                        # запомним дату последнего из fetch_size для изменения статуса
                         cur_model.modified, changed_entities = self.get_date_from_chunk_and_cut(changed_entities)
 
                         if changed_entities:
@@ -360,7 +362,7 @@ class Extractor:
                 ) film;
                 """
 
-        # Считывание данных из PG и обогащеине
+        # Считывание данных из PG и обогащение
         with self.conn.cursor() as cur:
             cur = self.query_exec(cur, query)
 
