@@ -83,7 +83,7 @@ async def fulltext_search_filmworks(
     pop_film_service: MultipleFilmsService = Depends(get_multiple_films_service),
 ) -> List[Film]:
 
-    persons = await pop_film_service.fulltext_search_filmworks(
+    persons = await pop_film_service.search_films(
         query,
         page_number,
         page_size
@@ -100,7 +100,7 @@ async def film_details(
     film_id: str,
     film_service: FilmService = Depends(get_film_service),
 ) -> FilmDetailed:
-    film = await film_service.get_by_id(film_id)
+    film = await film_service.get_by_uuid(film_id)
     if not film:
         # Если фильм не найден, отдаём 404 статус
         # Желательно пользоваться уже определёнными HTTP-статусами, которые содержат enum  
@@ -113,4 +113,4 @@ async def film_details(
         # Если бы использовалась общая модель для бизнес-логики и формирования ответов API
         # вы бы предоставляли клиентам данные, которые им не нужны 
         # и, возможно, данные, которые опасно возвращать
-    return FilmDetailed(id=film.id, title=film.title)
+    return film
