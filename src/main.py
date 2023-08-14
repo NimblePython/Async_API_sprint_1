@@ -33,7 +33,15 @@ async def startup():
     # Подключиться можем при работающем event-loop
     # Поэтому логика подключения происходит в асинхронной функции
     redis.redis = Redis(host=config.REDIS_HOST, port=config.REDIS_PORT)
-    elastic.es = AsyncElasticsearch(hosts=[f'{config.ELASTIC_HOST}:{config.ELASTIC_PORT}'])
+    elastic.es = AsyncElasticsearch(
+        hosts=[
+            {
+                'scheme': 'http',
+                'host': config.ELASTIC_HOST,
+                'port': config.ELASTIC_PORT,
+            }
+        ]
+    )
 
 
 @app.on_event('shutdown')
