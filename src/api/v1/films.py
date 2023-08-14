@@ -10,9 +10,9 @@ from pydantic import BaseModel
 from src.models.film import Film, FilmDetailed
 from src.services.film import (
     FilmService,
-    PopularFilmsService,
+    MultipleFilmsService,
     get_film_service,
-    get_popular_films_service
+    get_multiple_films_service,
 )
 
 # Объект router, в котором регистрируем обработчики
@@ -51,7 +51,7 @@ async def get_popular_films(
     sort: str = Query("-imdb_rating", description="Sort by field"),
     page_size: int = Query(50, description="Number of items per page", ge=1),
     page_number: int = Query(1, description="Page number", ge=1),
-    film_service: FilmService = Depends(),
+    film_service: MultipleFilmsService = Depends(get_multiple_films_service),
 ):
     valid_sort_fields = ("imdb_rating", "-imdb_rating",)
     if sort not in valid_sort_fields:
@@ -60,7 +60,7 @@ async def get_popular_films(
     desc = sort[0] == '-'
     
     try:
-        films = await film_service.get_popular_films(
+        films = await film_service.get_multiple_films(
             similar=similar,
             genre=genre,
             desc_order=desc,
@@ -80,7 +80,7 @@ async def fulltext_search_filmworks(
     query: str = Query('Star', description="Film title or part of film title"),
     page_size: int = Query(50, description="Number of items per page", ge=1),
     page_number: int = Query(1, description="Page number", ge=1),
-    pop_film_service: PopularFilmsService = Depends(get_popular_films_service),
+    pop_film_service: MultipleFilmsService = Depends(get_multiple_films_service),
 ) -> List[Film]:
 
     persons = await pop_film_service.fulltext_search_filmworks(
