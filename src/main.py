@@ -34,11 +34,13 @@ async def startup():
     # Поэтому логика подключения происходит в асинхронной функции
     redis.redis = Redis(host=config.REDIS_HOST, port=config.REDIS_PORT)
     elastic.es = AsyncElasticsearch(
-        hosts=[{
-            'host': config.ELASTIC_HOST,
-            'port': config.ELASTIC_PORT,
-            'scheme': 'http'
-        }]
+        hosts=[
+            {
+                'scheme': 'http',
+                'host': config.ELASTIC_HOST,
+                'port': config.ELASTIC_PORT,
+            }
+        ]
     )
 
 

@@ -2,6 +2,7 @@
 """Модуль, где определена модель кинопроизведения."""
 from typing import List, Optional
 from uuid import UUID
+
 from pydantic import BaseModel
 
 
@@ -9,7 +10,7 @@ class Participant(BaseModel):
     """Модель данных персоны, участвующей в создании фильма."""
 
     uuid: UUID
-    name: str
+    full_name: str
 
 
 class FilmGenre(BaseModel):
@@ -30,8 +31,7 @@ class Film(BaseModel):
 class FilmDetailed(Film):
     """Схема данных подробностей о кинопроизведении."""
 
-    genre: Optional[List[FilmGenre]]  # TODO: уточнить, т.к.
-    # в прошлом спринте у меня здесь был просто str
+    genre: Optional[List[str]]
     description: Optional[str]
     director: Optional[List[str]]
     actors_names: Optional[List[str]]

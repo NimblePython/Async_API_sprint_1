@@ -2,6 +2,7 @@
 """Модуль, где определена модель данных персон."""
 from typing import List, Optional
 from uuid import UUID
+
 from pydantic import BaseModel
 
 
