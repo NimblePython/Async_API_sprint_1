@@ -126,6 +126,32 @@ class PopularFilmsService(object):
         else:
             logger.debug('Got films from cache!')
         return films_page
+    
+    async def search_films(
+        self,
+        query: str,
+        page_number: int,
+        page_size: int
+    ) -> List[Film]:
+        
+        # создаём ключ для кэша
+        params_to_cache = [query, page_size, page_number]
+
+        page_cache_key = ', '.join(
+            [str(elem) for elem in params_to_cache],
+        )
+
+        # запрашиваем ключ в кэше
+        films_page = await self._get_popular_films_from_cache(page_cache_key)
+        if not films_page:
+
+            films_page = await self._fulltext_search_films_in_elastic(
+                query=query,
+                page_number=page_number,
+                page_size=page_size,
+            )
+
+        return films_page
 
     # 2.2. получение из es страницы списка фильмов отсортированных по популярности 
     async def _get_popular_films_from_elastic(
@@ -212,6 +238,24 @@ class PopularFilmsService(object):
             popular_films.append(Film(**hit["_source"]))
 
         return popular_films
+    
+    # 2.3 Полнотекстовый поиск по фильмам: 
+    async def _fulltext_search_films_in_elastic(
+        self,
+        query: str,
+        page_number: int,
+        page_size: int,
+    ):
+        search_results = await self.elastic.search(
+            index="movies",
+            body={
+                "query": {"match": {"title": query}},
+                "from": (page_number - 1) * page_size,
+                "size": page_size
+            },
+        )
+        logger.debug(search_results)
+        return [Film(**hit['_source']) for hit in search_results['hits']['hits']]
 
     # 3.2. получение страницы списка фильмов отсортированных по популярности из кэша
     async def _get_popular_films_from_cache(self, page_cache_key: str):
@@ -291,6 +335,15 @@ if __name__ == '__main__':
         )
     )
 
+
+    resulting_fulltext_search_films = loop.run_until_complete(
+        popular_films_service.search_films(
+            query='Star',
+            page_size=10,
+            page_number=1,
+        )
+    )
+
     loop.run_until_complete(redis.close())
     loop.run_until_complete(es.close())
     loop.close()
@@ -302,3 +355,5 @@ if __name__ == '__main__':
     logger.info(pformat(resulting_films_asc))
     logger.info('Multiple films desc(of genre):')
     logger.info(pformat(resulting_films_of_genre_desc))
+    logger.info('Multiple films (fulltext search):')
+    logger.info(pformat(resulting_fulltext_search_films))
