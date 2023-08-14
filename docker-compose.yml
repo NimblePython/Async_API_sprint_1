@@ -41,3 +41,21 @@ services:
     container_name: etl
     env_file:
       - .env
+
+  redis:
+    image: redis:6.2.13-alpine3.18
+    container_name: redis
+
+  api:
+    build: .
+    container_name: api
+
+  nginx:
+    build: ./nginx
+    volumes:
+      - "./staticfiles:/opt/app/static:ro"
+    depends_on:
+      - api
+    restart: always
+    ports:
+      - "80:80"

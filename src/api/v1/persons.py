@@ -88,7 +88,7 @@ async def person_films(person_id: str,
     for film in person.films:
         film_info = await film_service.get_by_id(str(film.uuid))
         if not film_info:
-            error_msg = f"""Ошибка целостности данных:\nВ БД отсутсвует фильм {film.uuid} 
+            error_msg = f"""Ошибка целостности данных:\nВ БД отсутствует фильм {film.uuid} 
             на который идет ссылка из портфолио персоны\nUUID персоны {person_id} c именем {person.full_name}
             """
             logging.error(error_msg)

@@ -12,6 +12,12 @@ lint:
 	flake8 .
 	mypy .
 
+up:
+	docker compose -f docker-compose.yml up -d --build
+
+down:
+	docker compose -f docker-compose.yml down
+
 up.local:
 	docker compose -f docker-compose.dev.yml --env-file .env.local up -d
 
@@ -24,7 +30,7 @@ debug.film.service:
 
 # необходимо указывать флаг --env-file, каждый раз при запуске локального docker-compose,
 # т.к. yml файл выполняется каждый раз, и если не указать --env-file, compose попытается
-# использоваmь для экспорта переменных файл умолчания .env. Поэтому логи контейнера с postgres
+# использовать для экспорта переменных файл умолчания .env. Поэтому логи контейнера с postgres
 # будут предвосхищаться двумя строками о том, что переменные ${DB_USER} и ${DB_NAME_PG}
 # не найдены и заполнены пустыми строками. При этом это не будет означать, что это же произошло
 # при старте контейнеров (up -d), но может сбить с толку.
