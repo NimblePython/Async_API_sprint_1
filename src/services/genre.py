@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import logging
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, List
+from pydantic import TypeAdapter
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
 
@@ -13,7 +14,8 @@ from src.db.redis import get_redis
 from src.models.genre import Genre
 
 GENRE_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 300 сек (5 минут)
-
+GENRES_SEARCH_ADAPTER = TypeAdapter(List[Genre])
+GENRES_CACHE_KEY = '_all_genres'
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +35,7 @@ class GenreService(object):
         """
 
         # Пытаемся получить данные из кеша, потому что оно работает быстрее
-        genre = await self._genre_from_cache(genre_id)
+        genre = await self._get_genre_from_cache(genre_id)
         if not genre:
             # Если жанра нет в кеше, то ищем его в Elasticsearch
             genre = await self._get_genre_from_elastic(genre_id)
@@ -45,26 +47,84 @@ class GenreService(object):
 
         return genre
 
+    async def get_genres(self) -> Optional[List[Genre]]:
+        # Пытаемся получить данные из кеша
+        genres = await self._all_genres_from_cache()
+        if not genres:
+            # Если жанров нет в кеше, то ищем его в Elasticsearch
+            genres = await self._all_genres_from_elastic()
+            if not genres:
+                return None
+            await self._put_all_genres_to_cache(genres)
+
+        return genres
+
     async def _get_genre_from_elastic(self, genre_id: str) -> Optional[Genre]:
+        """ Получает данные о жанре из ElasticSearch
+        """
         try:
             doc = await self.elastic.get(index='genres', id=genre_id)
         except NotFoundError:
             return None
         return Genre(**doc['_source'])
 
-    async def _genre_from_cache(self, genre_id: str) -> Optional[Genre]:
-        # Пытаемся получить данные о жанре из кеша, используя команду get
-        genre_data = await self.redis.get(genre_id)
-        if not genre_data:
+    async def _get_genre_from_cache(self, genre_id: str) -> Optional[Genre]:
+        """ Получает данные о жанре из кеша Redis, используя команду get
+        """
+        serialized_genre_data = await self.redis.get(genre_id)
+        if not serialized_genre_data:
             return None
 
-        # pydantic предоставляет удобное API для создания объекта моделей из json
-        return Genre.model_validate_json(genre_data)  # возвращаем десериализованный объект Genre
+        return Genre.model_validate_json(serialized_genre_data)  # возвращаем десериализованный объект Genre
 
     async def _put_genre_to_cache(self, genre: Genre):
-        """Сохраняет данные о персоне, используя команду set
+        """Сохраняет данные о жанре в Redis, используя команду set
         """
-        await self.redis.set(str(genre.uuid), genre.model_dump_json(), GENRE_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(
+            str(genre.uuid),
+            genre.model_dump_json(),
+            GENRE_CACHE_EXPIRE_IN_SECONDS
+        )
+
+    async def _all_genres_from_cache(self) -> Optional[List[Genre]]:
+        """ Получает данные о всех жанрах из кеша Redis
+
+        :return: список жанров или None
+        """
+        serialized_genres_data = await self.redis.get(GENRES_CACHE_KEY)
+        if not serialized_genres_data:
+            return None
+
+        return GENRES_SEARCH_ADAPTER.validate_json(serialized_genres_data)
+
+    async def _all_genres_from_elastic(self) -> Optional[List[Genre]]:
+        """ Получает данные о жанре из ElasticSearch
+
+        :return: список жанров или None
+        """
+        query = {
+            'query': {
+                'match_all': {}
+            }
+        }
+
+        try:
+            response = await self.elastic.search(index='genres', body=query)
+        except NotFoundError:
+            return None
+
+        hits = response.get("hits", {}).get("hits", [])
+        genres = [hit["_source"] for hit in hits]
+        return genres
+
+    async def _put_all_genres_to_cache(self, genres: List[Genre]):
+        """Сохраняет данные о всех жанрах в Redis, используя команду set
+        """
+        await self.redis.set(
+            GENRES_CACHE_KEY,
+            GENRES_SEARCH_ADAPTER.dump_json(genres),
+            GENRE_CACHE_EXPIRE_IN_SECONDS
+        )
 
 
 # С помощью Depends он сообщает, что ему необходимы Redis и Elasticsearch
