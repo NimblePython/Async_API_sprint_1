@@ -12,9 +12,9 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{service_url}}/api/v1/films/00e2e781-7af9-4f82-b4e9-14a488a3e184/",
+					"raw": "{{prod_url}}/api/v1/films/00e2e781-7af9-4f82-b4e9-14a488a3e184/",
 					"host": [
-						"{{service_url}}"
+						"{{prod_url}}"
 					],
 					"path": [
 						"api",
@@ -33,9 +33,9 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{service_url}}/api/v1/persons/search?query=georg&page_number=2&page_size=10",
+					"raw": "{{prod_url}}/api/v1/persons/search?query=georg&page_number=2&page_size=10",
 					"host": [
-						"{{service_url}}"
+						"{{prod_url}}"
 					],
 					"path": [
 						"api",
@@ -67,9 +67,9 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{service_url}}/api/v1/persons/017713b9-24cf-43a6-ab62-6b5e476499b8/",
+					"raw": "{{prod_url}}/api/v1/persons/017713b9-24cf-43a6-ab62-6b5e476499b8/",
 					"host": [
-						"{{service_url}}"
+						"{{prod_url}}"
 					],
 					"path": [
 						"api",
@@ -88,9 +88,9 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{service_url}}/api/v1/persons/a5a8f573-3cee-4ccc-8a2b-91cb9f55250a/film/",
+					"raw": "{{prod_url}}/api/v1/persons/a5a8f573-3cee-4ccc-8a2b-91cb9f55250a/film/",
 					"host": [
-						"{{service_url}}"
+						"{{prod_url}}"
 					],
 					"path": [
 						"api",
@@ -110,9 +110,9 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{service_url}}/api/v1/genres/b92ef010-5e4c-4fd0-99d6-41b6456272cd",
+					"raw": "{{prod_url}}/api/v1/genres/b92ef010-5e4c-4fd0-99d6-41b6456272cd",
 					"host": [
-						"{{service_url}}"
+						"{{prod_url}}"
 					],
 					"path": [
 						"api",
@@ -130,9 +130,9 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{service_url}}/api/v1/genres/",
+					"raw": "{{prod_url}}/api/v1/genres/",
 					"host": [
-						"{{service_url}}"
+						"{{prod_url}}"
 					],
 					"path": [
 						"api",
@@ -150,9 +150,9 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{base_url}}/persons/_mapping?pretty",
+					"raw": "{{service_url}}/persons/_mapping?pretty",
 					"host": [
-						"{{base_url}}"
+						"{{service_url}}"
 					],
 					"path": [
 						"persons",
@@ -174,9 +174,9 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{base_url}}/genres/_mapping?pretty",
+					"raw": "{{service_url}}/genres/_mapping?pretty",
 					"host": [
-						"{{base_url}}"
+						"{{service_url}}"
 					],
 					"path": [
 						"genres",
@@ -193,6 +193,26 @@
 			"response": []
 		}
 	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
 	"variable": [
 		{
 			"key": "service_url",
@@ -201,6 +221,11 @@
 		{
 			"key": "base_url",
 			"value": "http://127.0.0.1:9200"
+		},
+		{
+			"key": "prod_url",
+			"value": "http://127.0.0.1:80",
+			"type": "string"
 		}
 	]
 }

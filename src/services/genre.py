@@ -103,9 +103,9 @@ class GenreService(object):
         :return: список жанров или None
         """
         query = {
-            'query': {
-                'match_all': {}
-            }
+            'query': {'match_all': {}},
+            'from': 0,
+            'size': 100
         }
 
         try:

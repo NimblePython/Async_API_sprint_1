@@ -49,11 +49,14 @@ services:
   api:
     build: .
     container_name: api
+    depends_on:
+      - es
+      - postgres
+      - etl
+      - redis
 
   nginx:
     build: ./nginx
-    volumes:
-      - "./staticfiles:/opt/app/static:ro"
     depends_on:
       - api
     restart: always

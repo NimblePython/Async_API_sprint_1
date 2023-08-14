@@ -44,11 +44,11 @@ class PersonService(object):
         if not persons:
             # Если данных нет в кеше, то ищем его в Elasticsearch
             search_results = await self.elastic.search(
-                index="persons",
+                index='persons',
                 body={
-                    "query": {"match": {"full_name": query}},
-                    "from": (page_number - 1) * page_size,
-                    "size": page_size,
+                    'query': {'match': {'full_name': query}},
+                    'from': (page_number - 1) * page_size,
+                    'size': page_size,
                 }
             )
             persons = [Person(**hit['_source']) for hit in search_results['hits']['hits']]
