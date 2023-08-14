@@ -1,18 +1,13 @@
 # -*- coding: utf-8 -*-
-import logging
-
 import uvicorn
 from elasticsearch import AsyncElasticsearch
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from redis.asyncio import Redis
 
-
-from src.api.v1 import films, persons, genres
+from src.api.v1 import films, genres, persons
 from src.core import config
-from src.db import elastic
-from src.db import redis
-
+from src.db import elastic, redis
 
 app = FastAPI(
     # Конфигурируем название проекта. Оно будет отображаться в документации
@@ -21,8 +16,8 @@ app = FastAPI(
     docs_url='/api/openapi',
     # Адрес документации в формате OpenAPI
     openapi_url='/api/openapi.json',
-    # Можно сразу сделать небольшую оптимизацию сервиса 
-        # и заменить стандартный JSON-сереализатор на более шуструю версию, написанную на Rust
+    # Можно сразу сделать небольшую оптимизацию сервиса
+    # и заменить стандартный JSON-сереализатор на более шуструю версию, написанную на Rust
     default_response_class=ORJSONResponse,
 )
 
@@ -39,8 +34,8 @@ async def startup():
                 'scheme': 'http',
                 'host': config.ELASTIC_HOST,
                 'port': config.ELASTIC_PORT,
-            }
-        ]
+            },
+        ],
     )
 
 
