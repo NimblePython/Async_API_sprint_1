@@ -7,6 +7,7 @@ from http import HTTPStatus
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from uuid import UUID
+from typing import List
 
 from src.services.genre import GenreService, get_genre_service
 
@@ -46,3 +47,18 @@ async def genre_details(genre_id: str,
     pretty_object = json.dumps(obj.model_dump(), default=serialize_uuid, indent=4)
     logging.debug(f'Объект для выдачи {obj.__class__}:\n{pretty_object}')
     return obj
+
+
+@router.get('/', response_model=List[Genre])
+async def all_genres(genre_service: GenreService = Depends(get_genre_service)
+                     ) -> List[Genre]:
+    genres = await genre_service.get_genres()
+
+    if not genres:
+        # Если не найден, отдаём 404 статус
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='no genres in database')
+
+    logging.debug(f'Объект для выдачи list[Genres]:\n{genres}')
+
+    # Ответ клиенту без лишних данных (без description). Трансформация из model.Genre в Genre на лету
+    return genres

@@ -6,6 +6,20 @@ from uuid import UUID
 from pydantic import BaseModel
 
 
+class CustomEncoder:
+    @classmethod
+    def encode_uuid(cls, uuid: UUID) -> str:
+        return str(uuid)
+
+
+class Filmography(BaseModel):
+    """Модель фильмографии персоны."""
+
+    uuid: UUID
+    title: str
+    imdb_rating: float
+
+
 class PortfolioFilm(BaseModel):
     """Модель данных фильма в портфолио персоны."""
 
@@ -19,6 +33,9 @@ class Person(BaseModel):
     uuid: UUID
     full_name: str
     films: Optional[List[PortfolioFilm]]
+
+    class Config:
+        json_encoders = {UUID: CustomEncoder.encode_uuid}
 
 
 class PersonSearchQuery(BaseModel):

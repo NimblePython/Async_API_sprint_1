@@ -16,6 +16,9 @@
 **Информация о жанре**
 /api/v1/genres/{genre_id}
 
+**Информация о всех жанрах**
+/api/v1/genres/
+
 **Полнотекстный поиск по персналиям с пагинатором**
 /api/v1/persons/search?query=john&page_number=1&page_size=10
 
