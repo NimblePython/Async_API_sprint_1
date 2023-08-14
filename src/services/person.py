@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import logging
-import json
 
 from functools import lru_cache
 from typing import Optional, List
@@ -15,27 +14,29 @@ from src.db.elastic import get_elastic
 from src.db.redis import get_redis
 from src.models.person import Person
 
-PERSON_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 300 сек (5 минут)
 
+PERSON_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 300 сек (5 минут)
+PERSONS_SEARCH_ADAPTER = TypeAdapter(List[Person])
 
 logger = logging.getLogger(__name__)
-
-PERSON_SEARCH_ADAPTER = TypeAdapter(List[Person])
 
 
 # PersonService содержит бизнес-логику по работе с персоналиями.
 class PersonService(object):
-    def __init__(self,
-                 redis: Redis,
-                 elastic: AsyncElasticsearch
-                 ):
+    def __init__(
+            self,
+            redis: Redis,
+            elastic: AsyncElasticsearch
+    ):
         self.redis = redis
         self.elastic = elastic
 
-    async def search_person(self,
-                            query: str,
-                            page_number: int,
-                            page_size: int) -> List[Person] | None:
+    async def search_person(
+            self,
+            query: str,
+            page_number: int,
+            page_size: int,
+    ) -> List[Person] | None:
 
         # Пытаемся получить данные из кеша
         cache_key = f"{query}:{page_number}:{page_size}"
@@ -47,7 +48,7 @@ class PersonService(object):
                 body={
                     "query": {"match": {"full_name": query}},
                     "from": (page_number - 1) * page_size,
-                    "size": page_size
+                    "size": page_size,
                 }
             )
             persons = [Person(**hit['_source']) for hit in search_results['hits']['hits']]
@@ -111,7 +112,7 @@ class PersonService(object):
             return None
 
         # pydantic предоставляет удобное API для создания объекта моделей из json
-        return PERSON_SEARCH_ADAPTER.validate_json(serialized_search_person_data)
+        return PERSONS_SEARCH_ADAPTER.validate_json(serialized_search_person_data)
 
     async def _put_person_search_to_cache(self, cache_key: str, persons: List[Person]):
         """Сохраняет результат поиска, используя команду set
@@ -119,7 +120,7 @@ class PersonService(object):
 
         await self.redis.set(
             cache_key,
-            PERSON_SEARCH_ADAPTER.dump_json(persons),
+            PERSONS_SEARCH_ADAPTER.dump_json(persons),
             PERSON_CACHE_EXPIRE_IN_SECONDS
         )
 
