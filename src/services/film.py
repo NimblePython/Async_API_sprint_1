@@ -78,13 +78,13 @@ class FilmService(object):
         await self.redis.set(str(film.uuid), film.model_dump_json(), FILM_CACHE_EXPIRE_IN_SECONDS)
     
 
-class PopularFilmsService(object):
+class MultipleFilmsService(object):
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
         self.redis = redis
         self.elastic = elastic
 
     # 1.2. получение страницы списка фильмов отсортированных по популярности 
-    async def get_popular_films(
+    async def get_multiple_films(
         self,
         desc_order: bool,
         page_size: int,
@@ -104,11 +104,11 @@ class PopularFilmsService(object):
         )
 
         # запрашиваем ключ в кэше
-        films_page = await self._get_popular_films_from_cache(page_cache_key)
+        films_page = await self._get_multiple_films_from_cache(page_cache_key)
         if not films_page:
             logger.debug('No films in cache!')
             # если в кэше нет значения по этому ключу, делаем запрос в es
-            films_page = await self._get_popular_films_from_elastic(
+            films_page = await self._get_multiple_films_from_elastic(
                 desc_order=desc_order,
                 page_size=page_size,
                 page_number=page_number,
@@ -119,7 +119,7 @@ class PopularFilmsService(object):
                 return None
             
             # если результат не пуст - сохраняем его в кэш по ключу
-            await self._put_popular_films_to_cache(
+            await self._put_multiple_films_to_cache(
                 page_cache_key=page_cache_key,
                 films=films_page,    
             )
@@ -142,7 +142,7 @@ class PopularFilmsService(object):
         )
 
         # запрашиваем ключ в кэше
-        films_page = await self._get_popular_films_from_cache(page_cache_key)
+        films_page = await self._get_multiple_films_from_cache(page_cache_key)
         if not films_page:
 
             films_page = await self._fulltext_search_films_in_elastic(
@@ -154,7 +154,7 @@ class PopularFilmsService(object):
         return films_page
 
     # 2.2. получение из es страницы списка фильмов отсортированных по популярности 
-    async def _get_popular_films_from_elastic(
+    async def _get_multiple_films_from_elastic(
         self,
         desc_order: bool,
         page_size: int,
@@ -233,11 +233,11 @@ class PopularFilmsService(object):
 
         response = await self.elastic.search(index="movies", body=search_body)
 
-        popular_films = []
+        multiple_films = []
         for hit in response["hits"]["hits"]:
-            popular_films.append(Film(**hit["_source"]))
+            multiple_films.append(Film(**hit["_source"]))
 
-        return popular_films
+        return multiple_films
     
     # 2.3 Полнотекстовый поиск по фильмам: 
     async def _fulltext_search_films_in_elastic(
@@ -258,7 +258,7 @@ class PopularFilmsService(object):
         return [Film(**hit['_source']) for hit in search_results['hits']['hits']]
 
     # 3.2. получение страницы списка фильмов отсортированных по популярности из кэша
-    async def _get_popular_films_from_cache(self, page_cache_key: str):
+    async def _get_multiple_films_from_cache(self, page_cache_key: str):
         films_data = await self.redis.get(page_cache_key)
         if not films_data:
             return None
@@ -266,7 +266,7 @@ class PopularFilmsService(object):
         return FILM_ADAPTER.validate_json(films_data)
 
     # 4.2. сохранение страницы фильмов (отсортированных по популярности) в кэш:
-    async def _put_popular_films_to_cache(self, page_cache_key: str, films):
+    async def _put_multiple_films_to_cache(self, page_cache_key: str, films):
         await self.redis.set(
             page_cache_key,
             FILM_ADAPTER.dump_json(films),
@@ -287,19 +287,19 @@ def get_film_service(
 
 
 @lru_cache()
-def get_popular_films_service(
+def get_multiple_films_service(
     redis: Redis = Depends(get_redis),
     elastic: AsyncElasticsearch = Depends(get_elastic),
-) -> PopularFilmsService:
-    return PopularFilmsService(redis, elastic)
+) -> MultipleFilmsService:
+    return MultipleFilmsService(redis, elastic)
 
 
-# Блок кода ниже нужен только для отладки сервиса:
+# Блок кода ниже нужен только для отладки сервисов:
 if __name__ == '__main__':
     redis = Redis(host=config.REDIS_HOST, port=config.REDIS_PORT)
     es = AsyncElasticsearch(hosts=[f'http://{config.ELASTIC_HOST}:{config.ELASTIC_PORT}'])
     service = FilmService(redis=redis, elastic=es)
-    popular_films_service = PopularFilmsService(redis=redis, elastic=es)
+    multiple_films_service = MultipleFilmsService(redis=redis, elastic=es)
 
     loop = asyncio.get_event_loop()
 
@@ -310,7 +310,7 @@ if __name__ == '__main__':
     )
 
     resulting_films_desc = loop.run_until_complete(
-        popular_films_service.get_popular_films(
+        multiple_films_service.get_multiple_films(
             desc_order=True,
             page_size=10,
             page_number=1,
@@ -318,7 +318,7 @@ if __name__ == '__main__':
     )
 
     resulting_films_asc = loop.run_until_complete(
-        popular_films_service.get_popular_films(
+        multiple_films_service.get_multiple_films(
             desc_order=False,
             page_size=10,
             page_number=1,
@@ -327,7 +327,7 @@ if __name__ == '__main__':
 
     genre_uuid='49a81ffc-1670-4dcd-bbec-e224064cf99c'
     resulting_films_of_genre_desc = loop.run_until_complete(
-        popular_films_service.get_popular_films(
+        multiple_films_service.get_multiple_films(
             genre=genre_uuid,
             desc_order=True,
             page_size=10,
@@ -337,7 +337,7 @@ if __name__ == '__main__':
 
 
     resulting_fulltext_search_films = loop.run_until_complete(
-        popular_films_service.search_films(
+        multiple_films_service.search_films(
             query='Bob',
             page_size=10,
             page_number=1,
