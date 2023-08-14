@@ -33,7 +33,7 @@ class FilmService(object):
 
     # 1.1. получение фильма по uuid
     # get_by_id возвращает объект фильма. Он опционален, так как фильм может отсутствовать в базе
-    async def get_by_uuid(self, film_uuid: str) -> Optional[Film]:
+    async def get_by_uuid(self, film_uuid: str) -> Optional[FilmDetailed]:
         # Пытаемся получить данные из кеша, потому что оно работает быстрее
         film = await self._get_film_from_cache(film_uuid)
         if not film:
