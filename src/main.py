@@ -55,7 +55,6 @@ app.include_router(films.router, prefix='/api/v1/films', tags=['films'])
 app.include_router(persons.router, prefix='/api/v1/persons', tags=['persons'])
 app.include_router(genres.router, prefix='/api/v1/genres', tags=['genres'])
 
-
 if __name__ == '__main__':
     # Приложение может запускаться командой
     # `uvicorn main:app --host 0.0.0.0 --port 8000`

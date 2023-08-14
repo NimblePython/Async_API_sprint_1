@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from uuid import UUID
 from typing import List
-from src.models.person import PersonSearchQuery
+from src.models.person import PersonSearchQuery, Filmography
 
 from src.services.person import PersonService, get_person_service
 from src.services.film import FilmService, get_film_service
@@ -26,13 +26,6 @@ class Person(BaseModel):
     uuid: UUID
     full_name: str
     films: List[PortfolioFilm]
-
-
-# Модель ответа API по фильмографии персоны
-class Filmography(BaseModel):
-    uuid: UUID
-    title: str
-    imdb_rating: float
 
 
 # Определяем функцию для преобразования UUID в строку
@@ -85,22 +78,32 @@ async def person_films(person_id: str,
                        person_service: PersonService = Depends(get_person_service),
                        film_service: FilmService = Depends(get_film_service)
                        ) -> List[Filmography]:
+
     person = await person_service.get_by_id(person_id)
     if not person:
         # Если не найден, отдаём 404 статус
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='person not found')
 
-    # Перекладываем данные из models.Person в Filmography
     filmography = []
     for film in person.films:
         film_info = await film_service.get_by_id(str(film.uuid))
-        filmography.append(
-            Filmography(
-                uuid=film.uuid,
-                title=film_info.title,
-                imdb_rating=film_info.imdb_rating
+        if not film_info:
+            error_msg = f"""Ошибка целостности данных:\nВ БД отсутсвует фильм {film.uuid} 
+            на который идет ссылка из портфолио персоны\nUUID персоны {person_id} c именем {person.full_name}
+            """
+            logging.error(error_msg)
+        else:
+            filmography.append(
+                Filmography(
+                    uuid=film.uuid,
+                    title=film_info.title,
+                    imdb_rating=film_info.imdb_rating
+                )
             )
-        )
+
+    if not filmography:
+        # Если не найден, отдаём 404 статус
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='filmography not found')
 
     logging.debug(f'Объект для выдачи list[Filmography]:\n{filmography}')
     return filmography

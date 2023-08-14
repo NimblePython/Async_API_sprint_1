@@ -11,6 +11,14 @@ class CustomEncoder:
         return str(uuid)
 
 
+class Filmography(BaseModel):
+    """Модель фильмографии персоны."""
+
+    uuid: UUID
+    title: str
+    imdb_rating: float
+
+
 class PortfolioFilm(BaseModel):
     """Модель данных фильма в портфолио персоны."""
 
