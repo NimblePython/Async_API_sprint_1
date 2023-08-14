@@ -251,7 +251,7 @@ class PopularFilmsService(object):
             body={
                 "query": {"match": {"title": query}},
                 "from": (page_number - 1) * page_size,
-                "size": page_size
+                "size": page_size,
             },
         )
         logger.debug(search_results)
@@ -338,7 +338,7 @@ if __name__ == '__main__':
 
     resulting_fulltext_search_films = loop.run_until_complete(
         popular_films_service.search_films(
-            query='Star',
+            query='Bob',
             page_size=10,
             page_number=1,
         )
