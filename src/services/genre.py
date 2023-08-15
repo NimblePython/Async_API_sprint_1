@@ -83,6 +83,7 @@ class GenreService(object):
         if not serialized_genre_data:
             return None
 
+        logging.info(f"Взято из кэша по ключу: {cache_key}")
         return Genre.model_validate_json(serialized_genre_data)  # возвращаем десериализованный объект Genre
 
     async def _put_genre_to_cache(self, genre: Genre):
@@ -110,6 +111,7 @@ class GenreService(object):
         if not serialized_genres_data:
             return None
 
+        logging.info(f"Взято из кэша по ключу: {GENRES_CACHE_KEY}")
         return GENRES_SEARCH_ADAPTER.validate_json(serialized_genres_data)
 
     async def _all_genres_from_elastic(self) -> Optional[list[Genre]]:

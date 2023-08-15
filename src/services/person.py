@@ -108,6 +108,7 @@ class PersonService:
         if not person_data:
             return None
 
+        logging.info(f"Взято из кэша по ключу: {cache_key}")
         # pydantic предоставляет удобное API для создания объекта моделей из json
         return Person.model_validate_json(person_data)  # возвращаем десериализованный объект Person
 
@@ -135,6 +136,7 @@ class PersonService:
         if not serialized_search_person_data:
             return None
 
+        logging.info(f"Взято из кэша по ключу: {cache_key}")
         # pydantic предоставляет удобное API для создания объекта моделей из json
         return PERSONS_SEARCH_ADAPTER.validate_json(serialized_search_person_data)
 

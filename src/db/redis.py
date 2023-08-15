@@ -29,5 +29,5 @@ def generate_cache_key(index: str, params_to_key: dict) -> str:
     sorted_keys = list(sorted(params_to_key.keys()))
     cache_key = index + '::' + '::'.join([key + '::' + str(params_to_key[key]) for key in sorted_keys])
 
-    logging.debug(f"Кэш-ключ сгенерирован: {cache_key}")
+    logging.info(f"Кэш-ключ: {cache_key}")
     return cache_key

@@ -30,7 +30,6 @@ settings = Settings()
 print(settings.model_dump())
 
 
-
 # Применяем настройки логирования
 logging_config.dictConfig(LOGGING)
 
