@@ -14,7 +14,7 @@ from redis.asyncio import Redis
 
 from src.core import config
 from src.db.elastic import get_elastic
-from src.db.redis import get_redis
+from src.db.redis import get_redis, generate_cache_key
 from src.models.film import Film, FilmDetailed, FilmGenre
 
 FILM_ADAPTER = TypeAdapter(list[Film])
@@ -78,7 +78,14 @@ class FilmService:  # создатели линтера wemake python styleguide
     async def _get_film_from_cache(self, film_uuid: str) -> Optional[FilmDetailed]:
         # Пытаемся получить данные о фильме из кеша, используя команду get
         # https://redis.io/commands/get/
-        film_data = await self.redis.get(film_uuid)
+
+        # подготовка к генерации ключа
+        params_to_key = {
+            'uuid': film_uuid,
+        }
+        cache_key = generate_cache_key('movies', params_to_key)
+
+        film_data = await self.redis.get(cache_key)
         if not film_data:
             return None
 
@@ -92,7 +99,18 @@ class FilmService:  # создатели линтера wemake python styleguide
         # Выставляем время жизни кеша — 5 минут
         # https://redis.io/commands/set/
         # pydantic позволяет сериализовать модель в json
-        await self.redis.set(str(film.uuid), film.model_dump_json(), config.settings.CACHE_TIME_LIFE)
+
+        # подготовка к генерации ключа
+        params_to_key = {
+            'uuid': film.uuid,
+        }
+        cache_key = generate_cache_key('movies', params_to_key)
+
+        await self.redis.set(
+            cache_key,
+            film.model_dump_json(),
+            config.settings.CACHE_TIME_LIFE,
+        )
 
 
 class MultipleFilmsService:
@@ -129,15 +147,17 @@ class MultipleFilmsService:
         Returns:
             список фильмов (краткий вариант объекта)
         """
+
+        # ключ для кэша задается в формате ключ::значение::ключ::значение и т.д.
+        params_to_key = {
+            'desc': str(int(desc_order)),
+            'page_size': str(page_size),
+            'page_number': str(page_number),
+            'genre': genre,
+            'similar': similar,
+        }
         # создаём ключ для кэша
-        params_to_cache = [int(desc_order), page_size, page_number]
-        if genre is not None:
-            params_to_cache.append(genre)
-        if similar is not None:
-            params_to_cache.append(similar)
-        page_cache_key = ', '.join(
-            [str(elem) for elem in params_to_cache],
-        )
+        page_cache_key = generate_cache_key('movies', params_to_key)
 
         # запрашиваем ключ в кэше
         films_page = await self._get_multiple_films_from_cache(page_cache_key)
@@ -179,17 +199,20 @@ class MultipleFilmsService:
         Returns:
             список фильмов
         """
-        # создаём ключ для кэша
-        params_to_cache = [query, page_size, page_number]
 
-        page_cache_key = ', '.join(
-            [str(elem) for elem in params_to_cache],
-        )
+        # ключ для кэша задается в формате ключ::значение::ключ::значение и т.д.
+        params_to_key = {
+            'query': query,
+            'page_size': str(page_size),
+            'page_number': str(page_number),
+        }
+
+        # создаём ключ для кэша
+        page_cache_key = generate_cache_key('movies', params_to_key)
 
         # запрашиваем ключ в кэше
         films_page = await self._get_multiple_films_from_cache(page_cache_key)
         if not films_page:
-
             films_page = await self._fulltext_search_films_in_elastic(
                 query=query,
                 page_number=page_number,

@@ -10,23 +10,24 @@ from fastapi import Depends
 from redis.asyncio import Redis
 
 from src.db.elastic import get_elastic
-from src.db.redis import get_redis
+from src.db.redis import get_redis, generate_cache_key
 from src.models.genre import Genre
 
 from src.core import config
 
 GENRES_SEARCH_ADAPTER = TypeAdapter(list[Genre])
-GENRES_CACHE_KEY = '_all_genres'
+GENRES_CACHE_KEY = 'genres::all'
 
 logger = logging.getLogger(__name__)
 
 
 # GenreService содержит бизнес-логику по работе с персоналиями.
-class GenreService:
-    def __init__(self,
-                 redis: Redis,
-                 elastic: AsyncElasticsearch
-                 ):
+class GenreService(object):
+    def __init__(
+            self,
+            redis: Redis,
+            elastic: AsyncElasticsearch
+    ):
         self.redis = redis
         self.elastic = elastic
 
@@ -72,7 +73,13 @@ class GenreService:
     async def _get_genre_from_cache(self, genre_id: str) -> Optional[Genre]:
         """ Получает данные о жанре из кеша Redis, используя команду get
         """
-        serialized_genre_data = await self.redis.get(genre_id)
+
+        params_to_key = {
+            'uuid': genre_id,
+        }
+        cache_key = generate_cache_key('genres', params_to_key)
+
+        serialized_genre_data = await self.redis.get(cache_key)
         if not serialized_genre_data:
             return None
 
@@ -81,8 +88,15 @@ class GenreService:
     async def _put_genre_to_cache(self, genre: Genre):
         """Сохраняет данные о жанре в Redis, используя команду set
         """
+
+        # подготовка к генерации ключа
+        params_to_key = {
+            'uuid': genre.uuid,
+        }
+        cache_key = generate_cache_key('genres', params_to_key)
+
         await self.redis.set(
-            str(genre.uuid),
+            cache_key,
             genre.model_dump_json(),
             config.settings.CACHE_TIME_LIFE,
         )

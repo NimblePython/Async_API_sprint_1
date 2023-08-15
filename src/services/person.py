@@ -11,7 +11,7 @@ from fastapi import Depends
 from redis.asyncio import Redis
 
 from src.db.elastic import get_elastic
-from src.db.redis import get_redis
+from src.db.redis import get_redis, generate_cache_key
 from src.models.person import Person
 
 from src.core import config
@@ -39,8 +39,16 @@ class PersonService:
             page_size: int,
     ) -> list[Person] | None:
 
+        # параметры ключа для кэша
+        params_to_key = {
+            'query': query,
+            'page_size': str(page_size),
+            'page_number': str(page_number),
+        }
+        # создаём ключ для кэша
+        cache_key = generate_cache_key('persons', params_to_key)
+
         # Пытаемся получить данные из кеша
-        cache_key = f"{query}:{page_number}:{page_size}"
         persons = await self._person_search_from_cache(cache_key)
         if not persons:
             # Если данных нет в кеше, то ищем его в Elasticsearch
@@ -87,8 +95,16 @@ class PersonService:
         return Person(**doc['_source'])
 
     async def _person_from_cache(self, person_id: str) -> Optional[Person]:
+
+        # параметры ключа для кэша
+        params_to_key = {
+            'uuid': person_id,
+        }
+        # создаём ключ для кэша
+        cache_key = generate_cache_key('persons', params_to_key)
+
         # Пытаемся получить данные о персоне из кеша, используя команду get
-        person_data = await self.redis.get(person_id)
+        person_data = await self.redis.get(cache_key)
         if not person_data:
             return None
 
@@ -98,7 +114,14 @@ class PersonService:
     async def _put_person_to_cache(self, person: Person):
         """Сохраняет данные о персоне, используя команду set
         """
-        await self.redis.set(str(person.uuid), person.model_dump_json(), config.settings.CACHE_TIME_LIFE)
+        # параметры ключа для кэша
+        params_to_key = {
+            'uuid': person.uuid,
+        }
+        # создаём ключ для кэша
+        cache_key = generate_cache_key('persons', params_to_key)
+
+        await self.redis.set(cache_key, person.model_dump_json(), config.settings.CACHE_TIME_LIFE)
 
     async def _person_search_from_cache(self, cache_key: str) -> list[Person] | None:
         """
