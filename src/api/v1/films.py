@@ -57,17 +57,13 @@ async def get_popular_films(
 
     desc = sort[0] == '-'
 
-    try:
-        films = await film_service.get_multiple_films(
-            similar=similar,
-            genre=genre,
-            desc_order=desc,
-            page_size=page_size,
-            page_number=page_number,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
-    return films
+    return await film_service.get_multiple_films(
+        similar=similar,
+        genre=genre,
+        desc_order=desc,
+        page_size=page_size,
+        page_number=page_number,
+    )
 
 
 # 3. Поиск по фильмам (2.1. из т.з.)
