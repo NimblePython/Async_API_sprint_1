@@ -50,7 +50,10 @@ async def get_popular_films(
 ):
     valid_sort_fields = ('imdb_rating', '-imdb_rating')
     if sort not in valid_sort_fields:
-        raise HTTPException(status_code=400, detail='Invalid value for \'sort\' parameter')
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail='Invalid value for "sort" parameter',
+        )
 
     desc = sort[0] == '-'
 
@@ -63,7 +66,7 @@ async def get_popular_films(
             page_number=page_number,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail='Internal Server Error')
+        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
     return films
 
 
