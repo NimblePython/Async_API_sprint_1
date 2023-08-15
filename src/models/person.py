@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Модуль, где определена модель данных персон."""
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -24,7 +24,7 @@ class PortfolioFilm(BaseModel):
     """Модель данных фильма в портфолио персоны."""
 
     uuid: UUID
-    roles: List[str]
+    roles: list[str]
 
 
 class Person(BaseModel):
@@ -32,7 +32,7 @@ class Person(BaseModel):
 
     uuid: UUID
     full_name: str
-    films: Optional[List[PortfolioFilm]]
+    films: Optional[list[PortfolioFilm]]
 
     class Config:
         json_encoders = {UUID: CustomEncoder.encode_uuid}

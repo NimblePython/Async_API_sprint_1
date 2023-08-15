@@ -1,11 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from http import HTTPStatus
-from typing import Optional, List
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
 
 from src.models.film import Film, FilmDetailed
 from src.services.film import (
@@ -75,13 +74,13 @@ async def get_popular_films(
 # 3. Поиск по фильмам (2.1. из т.з.)
 # GET /api/v1/films/search?query=star&page_number=1&page_size=50
 
-@router.get("/search", response_model=List[Film])
+@router.get("/search", response_model=list[Film])
 async def fulltext_search_filmworks(
     query: str = Query('Star', description="Film title or part of film title"),
     page_size: int = Query(50, description="Number of items per page", ge=1),
     page_number: int = Query(1, description="Page number", ge=1),
     pop_film_service: MultipleFilmsService = Depends(get_multiple_films_service),
-) -> List[Film]:
+) -> list[Film]:
 
     persons = await pop_film_service.search_films(
         query,

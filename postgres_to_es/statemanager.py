@@ -2,7 +2,7 @@ import abc
 import json
 import logging
 
-from typing import Any, Dict
+from typing import Any
 
 
 class BaseStorage(abc.ABC):
@@ -15,11 +15,11 @@ class BaseStorage(abc.ABC):
     """
 
     @abc.abstractmethod
-    def save_state(self, state: Dict[str, Any]) -> None:
+    def save_state(self, state: dict[str, Any]) -> None:
         """Сохранить состояние в хранилище."""
 
     @abc.abstractmethod
-    def retrieve_state(self) -> Dict[str, Any]:
+    def retrieve_state(self) -> dict[str, Any]:
         """Получить состояние из хранилища."""
 
 
@@ -31,12 +31,12 @@ class JsonFileStorage(BaseStorage):
     def __init__(self, file_path: str) -> None:
         self.file_path = file_path
 
-    def save_state(self, state: Dict[str, Any]) -> None:
+    def save_state(self, state: dict[str, Any]) -> None:
         """Сохранить состояние в хранилище."""
         with open(self.file_path, 'w') as sf:
             json.dump(state, sf)
 
-    def retrieve_state(self) -> Dict[str, Any]:
+    def retrieve_state(self) -> dict[str, Any]:
         """Получить состояние из файла."""
         results = {}
         try:
@@ -67,7 +67,7 @@ class State:
         except Exception as e:
             print("%s: %s" % (e.__class__.__name__, e))
             print(f'Ошибка при сохранении ключа. Значение {value} в ключе {key} не сохранено')
-            # Возвращаем значение ключу в списке состояний, так как не удалось сохраниить в хранилище
+            # Возвращаем значение ключу в списке состояний, так как не удалось сохранить в хранилище
             if old_value:
                 conditions[key] = old_value
                 print(f'Актуальным значением ключа осталось: {old_value}')
@@ -78,4 +78,3 @@ class State:
         if key not in conditions.keys():
             return None
         return conditions[key]
-

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 from functools import lru_cache
-from typing import Optional, List
+from typing import Optional
 from pydantic import TypeAdapter
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
@@ -14,7 +14,7 @@ from src.db.redis import get_redis
 from src.models.genre import Genre
 
 GENRE_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 300 сек (5 минут)
-GENRES_SEARCH_ADAPTER = TypeAdapter(List[Genre])
+GENRES_SEARCH_ADAPTER = TypeAdapter(list[Genre])
 GENRES_CACHE_KEY = '_all_genres'
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ class GenreService(object):
 
         return genre
 
-    async def get_genres(self) -> Optional[List[Genre]]:
+    async def get_genres(self) -> Optional[list[Genre]]:
         # Пытаемся получить данные из кеша
         genres = await self._all_genres_from_cache()
         if not genres:
@@ -86,7 +86,7 @@ class GenreService(object):
             GENRE_CACHE_EXPIRE_IN_SECONDS
         )
 
-    async def _all_genres_from_cache(self) -> Optional[List[Genre]]:
+    async def _all_genres_from_cache(self) -> Optional[list[Genre]]:
         """ Получает данные о всех жанрах из кеша Redis
 
         :return: список жанров или None
@@ -97,7 +97,7 @@ class GenreService(object):
 
         return GENRES_SEARCH_ADAPTER.validate_json(serialized_genres_data)
 
-    async def _all_genres_from_elastic(self) -> Optional[List[Genre]]:
+    async def _all_genres_from_elastic(self) -> Optional[list[Genre]]:
         """ Получает данные о жанре из ElasticSearch
 
         :return: список жанров или None
@@ -117,7 +117,7 @@ class GenreService(object):
         genres = [hit["_source"] for hit in hits]
         return genres
 
-    async def _put_all_genres_to_cache(self, genres: List[Genre]):
+    async def _put_all_genres_to_cache(self, genres: list[Genre]):
         """Сохраняет данные о всех жанрах в Redis, используя команду set
         """
         await self.redis.set(
