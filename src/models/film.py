@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Модуль, где определена модель кинопроизведения."""
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -31,10 +31,10 @@ class Film(BaseModel):
 class FilmDetailed(Film):
     """Схема данных подробностей о кинопроизведении."""
 
-    genre: Optional[List[str]]
+    genre: Optional[list[str]]
     description: Optional[str]
-    director: Optional[List[str]]
-    actors_names: Optional[List[str]]
-    writers_names: Optional[List[str]]
-    actors: Optional[List[Participant]]
-    writers: Optional[List[Participant]]
+    director: Optional[list[str]]
+    actors_names: Optional[list[str]]
+    writers_names: Optional[list[str]]
+    actors: Optional[list[Participant]]
+    writers: Optional[list[Participant]]

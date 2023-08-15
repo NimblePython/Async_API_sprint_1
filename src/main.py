@@ -11,7 +11,7 @@ from src.db import elastic, redis
 
 app = FastAPI(
     # Конфигурируем название проекта. Оно будет отображаться в документации
-    title=config.PROJECT_NAME,
+    title=config.settings.PROJECT_NAME,
     # Адрес документации в красивом интерфейсе
     docs_url='/api/openapi',
     # Адрес документации в формате OpenAPI
@@ -27,13 +27,13 @@ async def startup():
     # Подключаемся к базам при старте сервера
     # Подключиться можем при работающем event-loop
     # Поэтому логика подключения происходит в асинхронной функции
-    redis.redis = Redis(host=config.REDIS_HOST, port=config.REDIS_PORT)
+    redis.redis = Redis(host=config.settings.REDIS_HOST, port=config.settings.REDIS_PORT)
     elastic.es = AsyncElasticsearch(
         hosts=[
             {
                 'scheme': 'http',
-                'host': config.ELASTIC_HOST,
-                'port': config.ELASTIC_PORT,
+                'host': config.settings.ES_HOST,
+                'port': config.settings.ES_PORT,
             },
         ],
     )

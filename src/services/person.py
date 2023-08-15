@@ -2,7 +2,7 @@
 import logging
 
 from functools import lru_cache
-from typing import Optional, List
+from typing import Optional
 from pydantic import TypeAdapter
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
@@ -14,9 +14,10 @@ from src.db.elastic import get_elastic
 from src.db.redis import get_redis
 from src.models.person import Person
 
+from src.core import config
 
-PERSON_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 300 сек (5 минут)
-PERSONS_SEARCH_ADAPTER = TypeAdapter(List[Person])
+
+PERSONS_SEARCH_ADAPTER = TypeAdapter(list[Person])
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class PersonService(object):
             query: str,
             page_number: int,
             page_size: int,
-    ) -> List[Person] | None:
+    ) -> list[Person] | None:
 
         # Пытаемся получить данные из кеша
         cache_key = f"{query}:{page_number}:{page_size}"
@@ -97,9 +98,9 @@ class PersonService(object):
     async def _put_person_to_cache(self, person: Person):
         """Сохраняет данные о персоне, используя команду set
         """
-        await self.redis.set(str(person.uuid), person.model_dump_json(), PERSON_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(str(person.uuid), person.model_dump_json(), config.settings.CACHE_TIME_LIFE)
 
-    async def _person_search_from_cache(self, cache_key: str) -> List[Person] | None:
+    async def _person_search_from_cache(self, cache_key: str) -> list[Person] | None:
         """
         Ищет информацию в кеше Redis
 
@@ -114,14 +115,14 @@ class PersonService(object):
         # pydantic предоставляет удобное API для создания объекта моделей из json
         return PERSONS_SEARCH_ADAPTER.validate_json(serialized_search_person_data)
 
-    async def _put_person_search_to_cache(self, cache_key: str, persons: List[Person]):
+    async def _put_person_search_to_cache(self, cache_key: str, persons: list[Person]):
         """Сохраняет результат поиска, используя команду set
         """
 
         await self.redis.set(
             cache_key,
             PERSONS_SEARCH_ADAPTER.dump_json(persons),
-            PERSON_CACHE_EXPIRE_IN_SECONDS
+            config.settings.CACHE_TIME_LIFE,
         )
 
 
@@ -135,4 +136,3 @@ def get_person_service(
 ) -> PersonService:
     """Провайдер для PersonService"""
     return PersonService(redis, elastic)
-

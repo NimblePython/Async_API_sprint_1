@@ -7,7 +7,6 @@ from http import HTTPStatus
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from uuid import UUID
-from typing import List
 from src.models.person import PersonSearchQuery, Filmography
 
 from src.services.person import PersonService, get_person_service
@@ -19,13 +18,13 @@ router = APIRouter()
 # Модель ответа API по персоне
 class PortfolioFilm(BaseModel):
     uuid: UUID
-    roles: List[str]
+    roles: list[str]
 
 
 class Person(BaseModel):
     uuid: UUID
     full_name: str
-    films: List[PortfolioFilm]
+    films: list[PortfolioFilm]
 
 
 # Определяем функцию для преобразования UUID в строку
@@ -36,10 +35,10 @@ def serialize_uuid(uuid_obj):
 
 
 # Описываем обработчик для поиска персоны
-@router.get("/search", response_model=List[Person])
+@router.get("/search", response_model=list[Person])
 async def search_persons(query_params: PersonSearchQuery = Depends(),
                          person_service: PersonService = Depends(get_person_service),
-                         ) -> List[Person]:
+                         ) -> list[Person]:
     persons = await person_service.search_person(
         query_params.query,
         query_params.page_number,
@@ -73,11 +72,11 @@ async def person_details(person_id: str,
     return obj
 
 
-@router.get('/{person_id}/film/', response_model=List[Filmography])
+@router.get('/{person_id}/film/', response_model=list[Filmography])
 async def person_films(person_id: str,
                        person_service: PersonService = Depends(get_person_service),
                        film_service: FilmService = Depends(get_film_service)
-                       ) -> List[Filmography]:
+                       ) -> list[Filmography]:
 
     person = await person_service.get_by_id(person_id)
     if not person:

@@ -4,7 +4,7 @@ import asyncio
 import logging
 from functools import lru_cache
 from pprint import pformat
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
@@ -17,8 +17,7 @@ from src.db.elastic import get_elastic
 from src.db.redis import get_redis
 from src.models.film import Film, FilmDetailed, FilmGenre
 
-FILM_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
-FILM_ADAPTER = TypeAdapter(List[Film])
+FILM_ADAPTER = TypeAdapter(list[Film])
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
@@ -41,7 +40,7 @@ class FilmService(object):
         self.elastic = elastic
 
     # 1.1. получение фильма по uuid
-    # get_by_id возвращает объект фильма. Он опционален, так как фильм может отсутствовать в базе
+    # get_by_uuid возвращает объект фильма. Он опционален, так как фильм может отсутствовать в базе
     async def get_by_uuid(self, film_uuid: str) -> Optional[FilmDetailed]:
         """Получить детальную информацию о фильме по его uuid.
 
@@ -59,7 +58,7 @@ class FilmService(object):
             if not film:
                 # Если он отсутствует в Elasticsearch, значит, фильма вообще нет в базе
                 return None
-            # Сохраняем фильм  в кеш
+            # Сохраняем фильм в кеш
             await self._put_film_to_cache(film)
 
         return film
@@ -91,7 +90,7 @@ class FilmService(object):
         # Выставляем время жизни кеша — 5 минут
         # https://redis.io/commands/set/
         # pydantic позволяет сериализовать модель в json
-        await self.redis.set(str(film.uuid), film.model_dump_json(), FILM_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(str(film.uuid), film.model_dump_json(), config.settings.CACHE_TIME_LIFE)
 
 
 class MultipleFilmsService(object):
@@ -115,7 +114,7 @@ class MultipleFilmsService(object):
         page_number: int,
         genre: Optional[str] = None,
         similar: Optional[UUID] = None,
-    ) -> Optional[List[Film]]:
+    ) -> Optional[list[Film]]:
         """Получение нескольких фильмов из elastic.
 
         Parameters:
@@ -123,7 +122,7 @@ class MultipleFilmsService(object):
             page_size: количество объектов на странице выдачи
             page_number: номер страницы выдачи
             genre: uuid жанра, по которому нужно фильтровать фильмы
-            similar: uuid фильма, по чьим жанрам нужно фильтровать филмы
+            similar: uuid фильма, по чьим жанрам нужно фильтровать фильмы
 
         Returns:
             список фильмов (краткий вариант объекта)
@@ -167,7 +166,7 @@ class MultipleFilmsService(object):
         query: str,
         page_number: int,
         page_size: int,
-    ) -> List[Film]:
+    ) -> list[Film]:
         """Полнотекстовый поиск фильмов.
 
         Parameters:
@@ -314,7 +313,7 @@ class MultipleFilmsService(object):
         await self.redis.set(
             page_cache_key,
             FILM_ADAPTER.dump_json(films),
-            FILM_CACHE_EXPIRE_IN_SECONDS,
+            config.settings.CACHE_TIME_LIFE,
         )
 
 
@@ -330,11 +329,11 @@ def get_film_service(
     """Провайдер сервиса для получения детальной информации о фильме.
 
     Parameters:
-        redis: экземляр redis
+        redis: экземпляр redis
         elastic: экземпляр elastic
 
     Returns:
-        сервис для получния информации о фильме
+        сервис для получения информации о фильме
     """
     return FilmService(redis, elastic)
 
@@ -347,24 +346,24 @@ def get_multiple_films_service(
     """Провайдер сервиса для получения детальной информации о нескольких фильмах.
 
     Parameters:
-        redis: экземляр redis
+        redis: экземпляр redis
         elastic: экземпляр elastic
 
     Returns:
-        сервис для получния информации о нескольких фильмах
+        сервис для получения информации о нескольких фильмах
     """
     return MultipleFilmsService(redis, elastic)
 
 
 # Блок кода ниже нужен только для отладки сервисов:
 if __name__ == '__main__':
-    redis = Redis(host=config.REDIS_HOST, port=config.REDIS_PORT)
+    redis = Redis(host=config.settings.REDIS_HOST, port=config.settings.REDIS_PORT)
     es = AsyncElasticsearch(
         hosts=[
             {
                 'scheme': 'http',
-                'host': config.ELASTIC_HOST,
-                'port': config.ELASTIC_PORT,
+                'host': config.settings.ES_HOST,
+                'port': config.settings.ES_PORT,
             },
         ],
     )

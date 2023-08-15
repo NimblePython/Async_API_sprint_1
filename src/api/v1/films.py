@@ -1,11 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from http import HTTPStatus
-from typing import Optional, List
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
 
 from src.models.film import Film, FilmDetailed
 from src.services.film import (
@@ -75,13 +74,13 @@ async def get_popular_films(
 # 3. Поиск по фильмам (2.1. из т.з.)
 # GET /api/v1/films/search?query=star&page_number=1&page_size=50
 
-@router.get("/search", response_model=List[Film])
+@router.get("/search", response_model=list[Film])
 async def fulltext_search_filmworks(
     query: str = Query('Star', description="Film title or part of film title"),
     page_size: int = Query(50, description="Number of items per page", ge=1),
     page_number: int = Query(1, description="Page number", ge=1),
     pop_film_service: MultipleFilmsService = Depends(get_multiple_films_service),
-) -> List[Film]:
+) -> list[Film]:
 
     persons = await pop_film_service.search_films(
         query,
@@ -104,13 +103,11 @@ async def film_details(
     if not film:
         # Если фильм не найден, отдаём 404 статус
         # Желательно пользоваться уже определёнными HTTP-статусами, которые содержат enum  
-                # Такой код будет более поддерживаемым
+        # Такой код будет более поддерживаемым
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='film not found')
 
     # Перекладываем данные из models.Film в Film
-    # Обратите внимание, что у модели бизнес-логики есть поле description 
-        # Которое отсутствует в модели ответа API. 
-        # Если бы использовалась общая модель для бизнес-логики и формирования ответов API
-        # вы бы предоставляли клиентам данные, которые им не нужны 
-        # и, возможно, данные, которые опасно возвращать
+    # У модели бизнес-логики есть поле description, которое отсутствует в модели ответа API.
+    # Если бы использовалась общая модель для бизнес-логики и формирования ответов API
+    # вы бы предоставляли клиентам секретные данные и/или данные, которые им не нужны
     return film
