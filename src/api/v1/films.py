@@ -7,12 +7,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.models.film import Film, FilmDetailed
-from src.services.film import (
-    FilmService,
-    MultipleFilmsService,
-    get_film_service,
-    get_multiple_films_service,
-)
+from src.services.film import (FilmService, MultipleFilmsService,
+                               get_film_service, get_multiple_films_service)
 
 # Объект router, в котором регистрируем обработчики
 router = APIRouter()
@@ -24,9 +20,9 @@ router = APIRouter()
 
 # С помощью декоратора регистрируем обработчик film_details
 # На обработку запросов по адресу <some_prefix>/some_id
-# Позже подключим роутер к корневому роутеру 
+# Позже подключим роутер к корневому роутеру
 # И адрес запроса будет выглядеть так — /api/v1/films/some_id
-# В сигнатуре функции указываем тип данных, получаемый из адреса запроса (film_id: str) 
+# В сигнатуре функции указываем тип данных, получаемый из адреса запроса (film_id: str)
 # И указываем тип возвращаемого объекта — Film
 
 
@@ -43,21 +39,24 @@ router = APIRouter()
 
 # в основном эндпойнте с использованием параметра similar
 
-@router.get("/")
+@router.get('/')
 async def get_popular_films(
-    similar: Optional[UUID] = Query(None, description="Get films of same genre as similar"),
-    genre: Optional[UUID] = Query(None, description="Get films of given genres"),
-    sort: str = Query("-imdb_rating", description="Sort by field"),
-    page_size: int = Query(50, description="Number of items per page", ge=1),
-    page_number: int = Query(1, description="Page number", ge=1),
+    similar: Optional[UUID] = Query(None, description='Get films of same genre as similar'),
+    genre: Optional[UUID] = Query(None, description='Get films of given genres'),
+    sort: str = Query('-imdb_rating', description='Sort by field'),
+    page_size: int = Query(50, description='Number of items per page', ge=1),
+    page_number: int = Query(1, description='Page number', ge=1),
     film_service: MultipleFilmsService = Depends(get_multiple_films_service),
 ):
-    valid_sort_fields = ("imdb_rating", "-imdb_rating",)
+    valid_sort_fields = ('imdb_rating', '-imdb_rating')
     if sort not in valid_sort_fields:
-        raise HTTPException(status_code=400, detail="Invalid value for 'sort' parameter")
-    
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail='Invalid value for "sort" parameter',
+        )
+
     desc = sort[0] == '-'
-    
+
     try:
         films = await film_service.get_multiple_films(
             similar=similar,
@@ -66,29 +65,27 @@ async def get_popular_films(
             page_size=page_size,
             page_number=page_number,
         )
-        return films
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
+    return films
 
 
 # 3. Поиск по фильмам (2.1. из т.з.)
 # GET /api/v1/films/search?query=star&page_number=1&page_size=50
 
-@router.get("/search", response_model=list[Film])
+@router.get('/search', response_model=list[Film])
 async def fulltext_search_filmworks(
-    query: str = Query('Star', description="Film title or part of film title"),
-    page_size: int = Query(50, description="Number of items per page", ge=1),
-    page_number: int = Query(1, description="Page number", ge=1),
+    query: str = Query('Star', description='Film title or part of film title'),
+    page_size: int = Query(50, description='Number of items per page', ge=1),
+    page_number: int = Query(1, description='Page number', ge=1),
     pop_film_service: MultipleFilmsService = Depends(get_multiple_films_service),
 ) -> list[Film]:
 
-    persons = await pop_film_service.search_films(
+    return await pop_film_service.search_films(
         query,
         page_number,
-        page_size
+        page_size,
     )
-
-    return persons
 
 
 # 4. Полная информация по фильму (т.з. 3.1.)
@@ -102,7 +99,7 @@ async def film_details(
     film = await film_service.get_by_uuid(film_id)
     if not film:
         # Если фильм не найден, отдаём 404 статус
-        # Желательно пользоваться уже определёнными HTTP-статусами, которые содержат enum  
+        # Желательно пользоваться уже определёнными HTTP-статусами, которые содержат enum
         # Такой код будет более поддерживаемым
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='film not found')
 
