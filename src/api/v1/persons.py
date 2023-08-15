@@ -35,7 +35,12 @@ def serialize_uuid(uuid_obj):
 
 
 # Описываем обработчик для поиска персоны
-@router.get("/search", response_model=list[Person])
+@router.get(
+    "/search",
+    response_model=list[Person],
+    summary='Поиск по имени персонажа',
+    description='Поиск персон со схожими именами: указать имя, количество записей на странице и номер страницы',
+)
 async def search_persons(query_params: PersonSearchQuery = Depends(),
                          person_service: PersonService = Depends(get_person_service),
                          ) -> list[Person]:
@@ -52,7 +57,12 @@ async def search_persons(query_params: PersonSearchQuery = Depends(),
 # На обработку запросов по адресу <some_prefix>/some_id
 # Позже подключим роутер к корневому роутеру
 # И адрес запроса будет выглядеть так — /api/v1/persons/some_id
-@router.get('/{person_id}', response_model=Person)
+@router.get(
+    '/{person_id}',
+    response_model=Person,
+    summary='Запрос персонажа по UUID',
+    description='Информация о персоне: UUID, ФИО и список фильмов, где принял участие: UUID фильма и исполненные роли',
+)
 async def person_details(person_id: str,
                          person_service: PersonService = Depends(get_person_service)
                          ) -> Person:
@@ -72,7 +82,13 @@ async def person_details(person_id: str,
     return obj
 
 
-@router.get('/{person_id}/film/', response_model=list[Filmography])
+@router.get(
+    '/{person_id}/film/',
+    response_model=list[Filmography],
+    summary='Запрос фильмографии персоны по UUID',
+    description='Полная информация о фильмографии персоны: UUID, название киноленты и рейтинг',
+
+)
 async def person_films(person_id: str,
                        person_service: PersonService = Depends(get_person_service),
                        film_service: FilmService = Depends(get_film_service)

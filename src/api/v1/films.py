@@ -39,7 +39,11 @@ router = APIRouter()
 
 # в основном эндпойнте с использованием параметра similar
 
-@router.get('/')
+@router.get(
+    '/',
+    summary='Популярные фильмы',
+    description='Популярное кино в своем жанре с сортировкой результата, указать количество и номер страницы',
+)
 async def get_popular_films(
     similar: Optional[UUID] = Query(None, description='Get films of same genre as similar'),
     genre: Optional[UUID] = Query(None, description='Get films of given genres'),
@@ -69,7 +73,12 @@ async def get_popular_films(
 # 3. Поиск по фильмам (2.1. из т.з.)
 # GET /api/v1/films/search?query=star&page_number=1&page_size=50
 
-@router.get('/search', response_model=list[Film])
+@router.get(
+    '/search',
+    response_model=list[Film],
+    summary='Поиск фильма по наименованию',
+    description='Запрос должен содержать наименование фильма, количество фильмов на странице и номер страницы',
+)
 async def fulltext_search_filmworks(
     query: str = Query('Star', description='Film title or part of film title'),
     page_size: int = Query(50, description='Number of items per page', ge=1),
@@ -87,7 +96,12 @@ async def fulltext_search_filmworks(
 # 4. Полная информация по фильму (т.з. 3.1.)
 
 # Внедряем FilmService с помощью Depends(get_film_service)
-@router.get('/{film_id}', response_model=FilmDetailed)
+@router.get(
+    '/{film_id}',
+    response_model=FilmDetailed,
+    summary='Запрос фильма по UUID',
+    description='Полная информация о фильме: UUID, наименование, рейтинг, жанр, описание, режиссер, актёры, авторы',
+)
 async def film_details(
     film_id: str,
     film_service: FilmService = Depends(get_film_service),
