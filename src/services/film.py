@@ -89,6 +89,7 @@ class FilmService:  # создатели линтера wemake python styleguide
         if not film_data:
             return None
 
+        logging.info(f"Взято из кэша по ключу: {cache_key}")
         # pydantic предоставляет удобное API для создания объекта моделей из json
         return FilmDetailed.model_validate_json(film_data)  # возвращаем
     # десериализованный объект Film
@@ -159,12 +160,10 @@ class MultipleFilmsService:
         # создаём ключ для кэша
         page_cache_key = generate_cache_key('movies', params_to_key)
 
-        # запрашиваем ключ в кэше
+        # запрашиваем инфо в кэше по ключу
         films_page = await self._get_multiple_films_from_cache(page_cache_key)
-        if films_page:
-            logger.debug('Got films from cache!')
-        else:
-            logger.debug('No films in cache!')
+        if not films_page:
+            logger.info('No films in cache!')
             # если в кэше нет значения по этому ключу, делаем запрос в es
             films_page = await self._get_multiple_films_from_elastic(
                 desc_order=desc_order,
@@ -210,7 +209,7 @@ class MultipleFilmsService:
         # создаём ключ для кэша
         page_cache_key = generate_cache_key('movies', params_to_key)
 
-        # запрашиваем ключ в кэше
+        # запрашиваем ифно в кэше
         films_page = await self._get_multiple_films_from_cache(page_cache_key)
         if not films_page:
             films_page = await self._fulltext_search_films_in_elastic(
@@ -218,6 +217,8 @@ class MultipleFilmsService:
                 page_number=page_number,
                 page_size=page_size,
             )
+        else:
+            logging.info(f"Взято из кэша по ключу: {page_cache_key}")
 
         return films_page
 
@@ -327,10 +328,12 @@ class MultipleFilmsService:
 
     # 3.2. получение страницы списка фильмов отсортированных по популярности из кэша
     async def _get_multiple_films_from_cache(self, page_cache_key: str):
+
         films_data = await self.redis.get(page_cache_key)
         if not films_data:
             return None
 
+        logging.info(f"Взято из кэша по ключу: {page_cache_key}")
         return FILM_ADAPTER.validate_json(films_data)
 
     # 4.2. сохранение страницы фильмов (отсортированных по популярности) в кэш:

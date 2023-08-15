@@ -26,7 +26,7 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'DEBUG',
+            'level': 'INFO',
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
@@ -56,7 +56,7 @@ LOGGING = {
         },
     },
     'root': {
-        'level': 'DEBUG',
+        'level': 'INFO',
         'formatter': 'verbose',
         'handlers': LOG_DEFAULT_HANDLERS,
     },
