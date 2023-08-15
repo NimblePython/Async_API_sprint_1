@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 # GenreService содержит бизнес-логику по работе с персоналиями.
-class GenreService(object):
+class GenreService:
     def __init__(self,
                  redis: Redis,
                  elastic: AsyncElasticsearch
