@@ -14,8 +14,9 @@ from src.db.elastic import get_elastic
 from src.db.redis import get_redis
 from src.models.person import Person
 
+from src.core import config
 
-PERSON_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 300 сек (5 минут)
+
 PERSONS_SEARCH_ADAPTER = TypeAdapter(list[Person])
 
 logger = logging.getLogger(__name__)
@@ -97,7 +98,7 @@ class PersonService(object):
     async def _put_person_to_cache(self, person: Person):
         """Сохраняет данные о персоне, используя команду set
         """
-        await self.redis.set(str(person.uuid), person.model_dump_json(), PERSON_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(str(person.uuid), person.model_dump_json(), config.settings.CACHE_TIME_LIFE)
 
     async def _person_search_from_cache(self, cache_key: str) -> list[Person] | None:
         """
@@ -121,7 +122,7 @@ class PersonService(object):
         await self.redis.set(
             cache_key,
             PERSONS_SEARCH_ADAPTER.dump_json(persons),
-            PERSON_CACHE_EXPIRE_IN_SECONDS
+            config.settings.CACHE_TIME_LIFE,
         )
 
 

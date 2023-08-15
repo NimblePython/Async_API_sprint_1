@@ -13,7 +13,8 @@ from src.db.elastic import get_elastic
 from src.db.redis import get_redis
 from src.models.genre import Genre
 
-GENRE_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 300 сек (5 минут)
+from src.core import config
+
 GENRES_SEARCH_ADAPTER = TypeAdapter(list[Genre])
 GENRES_CACHE_KEY = '_all_genres'
 
@@ -83,7 +84,7 @@ class GenreService(object):
         await self.redis.set(
             str(genre.uuid),
             genre.model_dump_json(),
-            GENRE_CACHE_EXPIRE_IN_SECONDS
+            config.settings.CACHE_TIME_LIFE,
         )
 
     async def _all_genres_from_cache(self) -> Optional[list[Genre]]:
@@ -123,7 +124,7 @@ class GenreService(object):
         await self.redis.set(
             GENRES_CACHE_KEY,
             GENRES_SEARCH_ADAPTER.dump_json(genres),
-            GENRE_CACHE_EXPIRE_IN_SECONDS
+            config.settings.CACHE_TIME_LIFE,
         )
 
 
