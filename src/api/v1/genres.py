@@ -30,7 +30,12 @@ def serialize_uuid(uuid_obj):
 # на обработку запросов по адресу <some_prefix>/some_id
 # позже подключим роутер к корневому роутеру
 # и адрес запроса будет выглядеть так — /api/v1/genres/some_id
-@router.get('/{genre_id}', response_model=Genre)
+@router.get(
+    '/{genre_id}',
+    response_model=Genre,
+    summary='Запрос жанра по UUID',
+    description='Полная информация о жанре: UUID и наименование',
+)
 async def genre_details(genre_id: str,
                         genre_service: GenreService = Depends(get_genre_service)
                         ) -> Genre:
@@ -48,7 +53,12 @@ async def genre_details(genre_id: str,
     return obj
 
 
-@router.get('/', response_model=list[Genre])
+@router.get(
+    '/',
+    response_model=list[Genre],
+    summary='Запрос всех жанров',
+    description='Будут выданы все существующие жанры',
+)
 async def all_genres(genre_service: GenreService = Depends(get_genre_service)) -> list[Genre]:
 
     genres = await genre_service.get_genres()
