@@ -26,7 +26,9 @@ logging.basicConfig(level=logging.DEBUG)
 # FilmService содержит бизнес-логику по работе с фильмами.
 # Никакой магии тут нет. Обычный класс с обычными методами.
 # Этот класс ничего не знает про DI — максимально сильный и независимый.
-class FilmService(object):
+class FilmService:  # создатели линтера wemake python styleguide - объясняют необходимость
+    # наследоваться от object тем, что если мы его не указываем, оно всё равно происходит неявно.
+    # А как мы знаем, "явное лучше неявного". WPS306 Found class without a base class
     """Сервис для получения детальной информации по фильму из es."""
 
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
@@ -93,7 +95,7 @@ class FilmService(object):
         await self.redis.set(str(film.uuid), film.model_dump_json(), config.settings.CACHE_TIME_LIFE)
 
 
-class MultipleFilmsService(object):
+class MultipleFilmsService:
     """Сервис для получения информации о нескольких фильмов из elastic."""
 
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 # PersonService содержит бизнес-логику по работе с персоналиями.
-class PersonService(object):
+class PersonService:
     def __init__(
             self,
             redis: Redis,
