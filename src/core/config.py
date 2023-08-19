@@ -1,23 +1,22 @@
-
+"""Конфигурация backend-приложения movies."""
 from logging import config as logging_config
 
-from pydantic import Extra, Field
 from pydantic_settings import BaseSettings
 
 from src.core.logger import LOGGING
 
 
 class Settings(BaseSettings):
-    # Название проекта. Используется в Swagger-документации
-    PROJECT_NAME: str = Field(env='PROJECT_NAME')
-    # Настройки Redis
-    REDIS_HOST: str = Field(env='REDIS_HOST')
-    REDIS_PORT: int = Field(env='REDIS_PORT')
-    # Настройки Elasticsearch
-    ES_HOST: str = Field(env='ES_HOST')
-    ES_PORT: int = Field(env='ES_PORT')
-    # Время жизни кэша Redis
-    CACHE_TIME_LIFE: int = Field(env='CACHE_TIME_LIFE')
+    """Класс настроек backend-приложения movies."""
+
+    PROJECT_NAME: str  # Название проекта. Используется в Swagger-документации
+
+    REDIS_HOST: str
+    REDIS_PORT: int
+    CACHE_TIME_LIFE: int  # Время жизни кэша Redis
+
+    ES_HOST: str
+    ES_PORT: int
 
     # Далее я закомментировал аналог того, что делает .env dotenv.
     # Нам это не нужно, т.к. предполагаем, что у нас все переменные уже загружены в окружение:
@@ -37,7 +36,7 @@ class Settings(BaseSettings):
     # >    extra = Extra.ignore
 
 
-settings = Settings()
+settings = Settings()  # type: ignore
 
 # Применяем настройки логирования
 logging_config.dictConfig(LOGGING)
