@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import logging
+
 import uvicorn
 from elasticsearch import AsyncElasticsearch
 from fastapi import FastAPI
@@ -8,6 +10,21 @@ from redis.asyncio import Redis
 from src.api.v1 import films, genres, persons
 from src.core import config
 from src.db import elastic, redis
+
+VERSION_DETAILS_TEMPLATE = """
+movies backend %s;
+%s.
+
+"""
+
+logger = logging.getLogger(__name__)
+logger.info(
+    VERSION_DETAILS_TEMPLATE % (
+        config.settings.APP_VERSION,
+        config.settings.APP_VERSION_DETAILS,
+    ),
+)
+
 
 app = FastAPI(
     # Конфигурируем название проекта. Оно будет отображаться в документации
@@ -44,6 +61,15 @@ async def shutdown():
     # Отключаемся от баз при выключении сервера
     await redis.redis.close()
     await elastic.es.close()
+
+
+@app.get('/api/v1/version')
+async def version():
+    return {
+        'app': 'movies backend',
+        'version': config.settings.APP_VERSION,
+        'details': config.settings.APP_VERSION_DETAILS,
+    }
 
 
 # Подключаем роутер к серверу, указав префиксы
