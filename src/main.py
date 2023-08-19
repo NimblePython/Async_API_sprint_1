@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+from  contextlib import asynccontextmanager
 
 import uvicorn
 from elasticsearch import AsyncElasticsearch
@@ -26,21 +27,8 @@ logger.info(
 )
 
 
-app = FastAPI(
-    # Конфигурируем название проекта. Оно будет отображаться в документации
-    title=config.settings.PROJECT_NAME,
-    # Адрес документации в красивом интерфейсе
-    docs_url='/api/openapi',
-    # Адрес документации в формате OpenAPI
-    openapi_url='/api/openapi.json',
-    # Можно сразу сделать небольшую оптимизацию сервиса
-    # и заменить стандартный JSON-сереализатор на более шуструю версию, написанную на Rust
-    default_response_class=ORJSONResponse,
-)
-
-
-@app.on_event('startup')
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     # Подключаемся к базам при старте сервера
     # Подключиться можем при работающем event-loop
     # Поэтому логика подключения происходит в асинхронной функции
@@ -55,12 +43,25 @@ async def startup():
         ],
     )
 
+    yield
 
-@app.on_event('shutdown')
-async def shutdown():
     # Отключаемся от баз при выключении сервера
     await redis.redis.close()
     await elastic.es.close()
+
+
+app = FastAPI(
+    # Конфигурируем название проекта. Оно будет отображаться в документации
+    title=config.settings.PROJECT_NAME,
+    # Адрес документации в красивом интерфейсе
+    docs_url='/api/openapi',
+    # Адрес документации в формате OpenAPI
+    openapi_url='/api/openapi.json',
+    # Можно сразу сделать небольшую оптимизацию сервиса
+    # и заменить стандартный JSON-сереализатор на более шуструю версию, написанную на Rust
+    default_response_class=ORJSONResponse,
+    lifespan=lifespan,
+)
 
 
 @app.get('/api/v1/version')
