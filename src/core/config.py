@@ -9,6 +9,9 @@ from src.core.logger import LOGGING
 class Settings(BaseSettings):
     """Класс настроек backend-приложения movies."""
 
+    APP_VERSION: str = '1.0.2'
+    APP_VERSION_DETAILS: str = 'Settings class debugged. (A.L.)'
+
     PROJECT_NAME: str  # Название проекта. Используется в Swagger-документации
 
     REDIS_HOST: str
