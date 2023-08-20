@@ -27,7 +27,12 @@ def generate_cache_key(index: str, params_to_key: dict) -> str:
         raise Exception
 
     sorted_keys = list(sorted(params_to_key.keys()))
-    cache_key = index + '::' + '::'.join([key + '::' + str(params_to_key[key]) for key in sorted_keys])
+    params = ['{}::{}'.format(key, str(params_to_key[key])) for key in sorted_keys]
+
+    cache_key = '{}::{}'.format(index, '::'.join(params))
+
+    #  TODO: удалить после тестирования
+    #  cache_key = index + '::' + '::'.join([key + '::' + str(params_to_key[key]) for key in sorted_keys])
 
     logging.info(f"Кэш-ключ: {cache_key}")
     return cache_key
