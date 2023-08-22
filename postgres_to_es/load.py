@@ -4,8 +4,6 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import streaming_bulk
 from backoff_dec import backoff
 from typing import Literal
-from models import FilmworkModel
-from http import HTTPStatus
 
 
 class Load:
@@ -168,7 +166,7 @@ class Load:
         'genres': index_genres_mappings,
     }
 
-    def __init__(self, data: list, es_index: Literal[indexes.keys()], host: str, port: int):
+    def __init__(self, data: list, es_index: Literal['movies', 'persons', 'genres'], host: str, port: int):
         self.es_socket = f'http://{host}:{port}/'
         self.es = self.connect_to_es()
         self.data = data

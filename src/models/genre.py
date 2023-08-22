@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """Модуль, где определена модель данных жанров."""
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
-from typing import Optional
-
 
 
 class Genre(BaseModel):
