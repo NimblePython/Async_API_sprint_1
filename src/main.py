@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+import logging
+from  contextlib import asynccontextmanager
+
 import uvicorn
 from elasticsearch import AsyncElasticsearch
 from fastapi import FastAPI
@@ -9,21 +12,23 @@ from src.api.v1 import films, genres, persons
 from src.core import config
 from src.db import elastic, redis
 
-app = FastAPI(
-    # Конфигурируем название проекта. Оно будет отображаться в документации
-    title=config.settings.PROJECT_NAME,
-    # Адрес документации в красивом интерфейсе
-    docs_url='/api/openapi',
-    # Адрес документации в формате OpenAPI
-    openapi_url='/api/openapi.json',
-    # Можно сразу сделать небольшую оптимизацию сервиса
-    # и заменить стандартный JSON-сереализатор на более шуструю версию, написанную на Rust
-    default_response_class=ORJSONResponse,
+VERSION_DETAILS_TEMPLATE = """
+movies backend %s;
+%s.
+
+"""
+
+logger = logging.getLogger(__name__)
+logger.info(
+    VERSION_DETAILS_TEMPLATE % (
+        config.settings.APP_VERSION,
+        config.settings.APP_VERSION_DETAILS,
+    ),
 )
 
 
-@app.on_event('startup')
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     # Подключаемся к базам при старте сервера
     # Подключиться можем при работающем event-loop
     # Поэтому логика подключения происходит в асинхронной функции
@@ -38,12 +43,34 @@ async def startup():
         ],
     )
 
+    yield
 
-@app.on_event('shutdown')
-async def shutdown():
     # Отключаемся от баз при выключении сервера
     await redis.redis.close()
     await elastic.es.close()
+
+
+app = FastAPI(
+    # Конфигурируем название проекта. Оно будет отображаться в документации
+    title=config.settings.PROJECT_NAME,
+    # Адрес документации в красивом интерфейсе
+    docs_url='/api/openapi',
+    # Адрес документации в формате OpenAPI
+    openapi_url='/api/openapi.json',
+    # Можно сразу сделать небольшую оптимизацию сервиса
+    # и заменить стандартный JSON-сереализатор на более шуструю версию, написанную на Rust
+    default_response_class=ORJSONResponse,
+    lifespan=lifespan,
+)
+
+
+@app.get('/api/v1/version')
+async def version():
+    return {
+        'app': 'movies backend',
+        'version': config.settings.APP_VERSION,
+        'details': config.settings.APP_VERSION_DETAILS,
+    }
 
 
 # Подключаем роутер к серверу, указав префиксы

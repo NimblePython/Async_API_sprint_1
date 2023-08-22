@@ -8,7 +8,8 @@ from pydantic import BaseModel
 
 class CustomEncoder:
     @classmethod
-    def encode_uuid(cls, uuid: UUID) -> str:
+    def encode_uuid(cls, uuid: UUID) -> str:  # TODO: этот метод добавлен по указанию ревьюера?
+        # на мой взгляд избыточен и UUID в любом случае будет сериализоваться в строку.
         return str(uuid)
 
 
@@ -34,12 +35,19 @@ class Person(BaseModel):
     full_name: str
     films: Optional[list[PortfolioFilm]]
 
-    class Config:
+    class Config:  # TODO: эту часть нужно убрать, т.к. во втором Pydantic уже встроен достаточно
+        # оптимальный json encoder.
+        # А то у нас сейчас всё время ворнинг при запуске API
+        # UserWarning: Valid config keys have changed in V2:
+        # * 'json_encoders' has been removed
+        # warnings.warn(message, UserWarning)
+
         json_encoders = {UUID: CustomEncoder.encode_uuid}
 
 
 class PersonSearchQuery(BaseModel):
     """Модель параметров запроса при поиске персон."""
+
     query: str
     page_number: int = 1
     page_size: int = 50
