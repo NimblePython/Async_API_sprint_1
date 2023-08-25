@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 """Модуль реализует API для доступа к информации о персоналиях."""
 import json
@@ -10,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from src.models.person import Filmography, PersonSearchQuery
+from src.models.validation import check_uuid, serialize_uuid
 from src.services.film import FilmService, get_film_service
 from src.services.person import PersonService, get_person_service
 
@@ -18,35 +18,31 @@ router = APIRouter()
 
 # Модель ответа API по персоне
 class PortfolioFilm(BaseModel):
-    """Модель данных - информация о фильме,
-    где принимала участие персона, и ее ролях
+    """Модель данных о фильме персоны.
+
+    Информация о UUID фильма и ролях
 
     Свойства:
         UUID фильма
         Список ролей персоны в этом фильме.
     """
+
     uuid: UUID
     roles: list[str]
 
 
 class Person(BaseModel):
-    """Модель данных - Персона,
+    """Модель данных - Персона.
 
     Свойства:
         UUID персоны.
         Полное имя (ФИО) в одной строке.
         Список с Портфолио (фильм и роли в нём).
     """
+
     uuid: UUID
     full_name: str
     films: list[PortfolioFilm]
-
-
-# Определяем функцию для преобразования UUID в строку
-def serialize_uuid(uuid_obj):
-    if isinstance(uuid_obj, UUID):
-        return str(uuid_obj)
-    raise TypeError('Object of type {0} is not JSON serializable'.format(type(uuid_obj)))
 
 
 # Описываем обработчик для поиска персоны
@@ -54,13 +50,13 @@ def serialize_uuid(uuid_obj):
     '/search',
     response_model=list[Person],
     summary='Поиск по имени персонажа',
-    description='Поиск персон со схожими именами: указать имя, количество записей на странице и номер страницы',
+    description='В поисковом запросе указать имя, кол-во записей на странице и номер страницы',
 )
 async def search_persons(
     query_params: PersonSearchQuery = Depends(),
     person_service: PersonService = Depends(get_person_service),
 ) -> list[Person] | None:
-    """Полнотекстовый поиск персон по части имени
+    """Полнотекстовый поиск персон по части имени.
 
     Args:
         query_params: Параметры запроса
@@ -98,7 +94,15 @@ async def person_details(
 
     Returns:
         Person - информация о персоне
+
+    Raises:
+        HTTPException: BAD_REQUEST - Если ошибка в запросе в формате UUID
+        HTTPException: NOT_FOUND - Если персона не найдена
     """
+    if not check_uuid(person_id):
+        # Если не формат UUID, отдаём 400 статус
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail='UUID type incorrect')
+
     person = await person_service.get_by_id(person_id)
     if not person:
         # Если не найден, отдаём 404 статус
@@ -126,6 +130,23 @@ async def person_films(
     person_service: PersonService = Depends(get_person_service),
     film_service: FilmService = Depends(get_film_service),
 ) -> list[Filmography]:
+    """Получает фильмографию по UUID персоны.
+
+    Args:
+        person_id: UUID персоны
+        person_service: Связь с сервисом персон для доступа к персоне
+        film_service: Связь с сервисом фильмов для доступа к информации о фильмах
+
+    Returns:
+        Список объектов фильмографии
+
+    Raises:
+        HTTPException: BAD_REQUEST - Если ошибка в запросе в формате UUID
+        HTTPException: NOT_FOUND - Если персона не найдена
+    """
+    if not check_uuid(person_id):
+        # Если не формат UUID, отдаём 400 статус
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail='UUID type incorrect')
 
     person = await person_service.get_by_id(person_id)
     if not person:
@@ -144,9 +165,13 @@ async def person_films(
                 ),
             )
         else:
-            error_msg = """Ошибка целостности данных:\n
-            В БД отсутствует фильм {0} на который идет ссылка из портфолио персоны\n
-            UUID персоны {1} c именем {2}""".format(film.uuid, person_id, person.full_name)
+            if check_uuid(str(film.uuid)):
+                error_msg = 'В БД отсутствует фильм: {0}. Ссылка на фильм у персоны: {1}'.format(
+                    film.uuid,
+                    person_id,
+                )
+            else:
+                error_msg = 'Формат UUID фильма в БД неверный: {0}'.format(str(film.uuid))
             logging.error(error_msg)
 
     if not filmography:

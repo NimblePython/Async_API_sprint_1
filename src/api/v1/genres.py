@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 """Модуль реализует API для доступа к информации о жанрах."""
 
@@ -10,6 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from src.models.validation import check_uuid, serialize_uuid
 from src.services.genre import GenreService, get_genre_service
 
 router = APIRouter()
@@ -17,20 +17,10 @@ router = APIRouter()
 
 # Модель ответа API по жанру
 class Genre(BaseModel):
+    """Модель жанра для передачи клиенту."""
+
     uuid: UUID
     name: str
-
-
-# Определяем функцию для преобразования UUID в строку
-def serialize_uuid(uuid_obj: UUID) -> str:
-    """Функция переводит тип UUID в str
-
-    Используется для json.dumps
-    json не умеет сериализовать тип UUID по умолчанию
-    """
-    if isinstance(uuid_obj, UUID):
-        return str(uuid_obj)
-    raise TypeError('Object of type {0} is not UUID type'.format(type(uuid_obj)))
 
 
 # Регистрируем обработчик genre_details
@@ -47,6 +37,22 @@ async def genre_details(
     genre_id: str,
     genre_service: GenreService = Depends(get_genre_service),
 ) -> Genre:
+    """Детализация персоны при обращении к ручке api/v1/{person_id}.
+
+    Args:
+        genre_id: UUID персоны (актера, сценариста или режиссера).
+        genre_service: DI - соединение с БД Elasticsearch и Redis.
+
+    Returns:
+        Genre - информация о жанре
+
+    Raises:
+        HTTPException: BAD_REQUEST - Если ошибка в запросе в формате UUID
+        HTTPException: NOT_FOUND - Если жанр не найден
+    """
+    if not check_uuid(genre_id):
+        # Если не формат UUID, отдаём 400 статус
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail='UUID type incorrect')
 
     genre = await genre_service.get_by_id(genre_id)
     if not genre:
@@ -56,10 +62,10 @@ async def genre_details(
     # Перекладываем данные из `models.Genre` в `Genre`
     # Модель бизнес-логики (для ответа API), как правило, отличается от общей модели данных
 
-    obj = Genre(uuid=genre.uuid, name=genre.name)
-    pretty_object = json.dumps(obj.model_dump(), default=serialize_uuid, indent=4)
-    logging.debug('Объект для выдачи {0}:\n{1}'.format(obj.__class__, pretty_object))
-    return obj
+    genre = Genre(uuid=genre.uuid, name=genre.name)
+    pretty_object = json.dumps(genre.model_dump(), default=serialize_uuid, indent=4)
+    logging.debug('Объект для выдачи {0}:\n{1}'.format(genre.__class__, pretty_object))
+    return genre
 
 
 @router.get(
@@ -71,7 +77,19 @@ async def genre_details(
 async def all_genres(
     genre_service: GenreService = Depends(get_genre_service),
 ) -> list[Genre]:
+    """Функция для обработки запроса к еndpoint api/v1/genres/.
 
+    Возвращает информацию о всех жанрах (не более 100).
+
+    Args:
+        genre_service: Связь с сервисом для доступа жанров
+
+    Returns:
+        Список жанров
+
+    Raises:
+        HTTPException: NOT_FOUND - Не найден ни один жанр
+    """
     genres = await genre_service.get_genres()
     if not genres:
         # Если не найден, отдаём 404 статус
@@ -79,5 +97,5 @@ async def all_genres(
 
     logging.debug('Объект для выдачи list[Genres]:\n{0}'.format(genres))
 
-    # Ответ клиенту без лишних данных (без description). Трансформация из model.Genre в Genre на лету
+    # Ответ клиенту без без description. Трансформация из model.Genre в Genre на лету
     return genres
