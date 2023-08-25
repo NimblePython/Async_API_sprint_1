@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-import logging
+"""Сервис PersonService для доступа к данным персоналий.
 
+Модуль обеспечивающий реализацию основного сервиса.
+"""
+import logging
 from functools import lru_cache
 from typing import Optional
-from pydantic import TypeAdapter
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
-
 from fastapi import Depends
+from pydantic import TypeAdapter
 from redis.asyncio import Redis
 
-from src.db.elastic import get_elastic
-from src.db.redis import get_redis, generate_cache_key
-from src.models.person import Person
-
 from src.core import config
-
+from src.db.elastic import get_elastic
+from src.db.redis import generate_cache_key, get_redis
+from src.models.person import Person
 
 PERSONS_SEARCH_ADAPTER = TypeAdapter(list[Person])
 
@@ -24,21 +24,42 @@ logger = logging.getLogger(__name__)
 
 # PersonService содержит бизнес-логику по работе с персоналиями.
 class PersonService:
+    """Класс сервиса работы с персонами.
+
+    Обеспечивает доступ к информации о персонах.
+
+    """
+
     def __init__(
-            self,
-            redis: Redis,
-            elastic: AsyncElasticsearch
+        self,
+        redis: Redis,
+        elastic: AsyncElasticsearch,
     ):
+        """Конструктор PersonService.
+
+        Args:
+            redis: Ссылка на объект Redis.
+            elastic: Ссылка на объект Elasticsearch.
+        """
         self.redis = redis
         self.elastic = elastic
 
     async def search_person(
-            self,
-            query: str,
-            page_number: int,
-            page_size: int,
+        self,
+        query: str,
+        page_number: int,
+        page_size: int,
     ) -> list[Person] | None:
+        """Полнотекстовый поиск персоны по имени.
 
+        Args:
+            query: Запрос, содержащий искомую строку (подстроку).
+            page_number: Номер страницы (пагинация).
+            page_size: Количество персон на одну страницу.
+
+        Returns:
+            Список персон подходящих под поисковой запрос
+        """
         # параметры ключа для кэша
         params_to_key = {
             'query': query,
@@ -58,7 +79,7 @@ class PersonService:
                     'query': {'match': {'full_name': query}},
                     'from': (page_number - 1) * page_size,
                     'size': page_size,
-                }
+                },
             )
             persons = [Person(**hit['_source']) for hit in search_results['hits']['hits']]
             if not persons:
@@ -70,10 +91,14 @@ class PersonService:
         return persons
 
     async def get_by_id(self, person_id: str) -> Optional[Person]:
-        """Возвращает Персонаж по его UUID из ES.
-        Возвращаемый параметр опционален, так как Персонаж может отсутствовать в БД
-        """
+        """Получить детальную информацию о персоне по его UUID.
 
+        Args:
+            person_id: Идентификатор UUID персоны
+
+        Returns:
+            Десериализованный объект Person или None
+        """
         # Пытаемся получить данные из кеша, потому что оно работает быстрее
         person = await self._person_from_cache(person_id)
         if not person:
@@ -95,7 +120,14 @@ class PersonService:
         return Person(**doc['_source'])
 
     async def _person_from_cache(self, person_id: str) -> Optional[Person]:
+        """Получить информацию о персоне из кэша Redis.
 
+        Args:
+            person_id: Идентификатор UUID персоны.
+
+        Returns:
+            Десериализованный объект Person или None.
+        """
         # параметры ключа для кэша
         params_to_key = {
             'uuid': person_id,
@@ -108,12 +140,16 @@ class PersonService:
         if not person_data:
             return None
 
-        logging.info(f"Взято из кэша по ключу: {cache_key}")
+        logging.info('Взято из кэша по ключу: {0}'.format(cache_key))
         # pydantic предоставляет удобное API для создания объекта моделей из json
-        return Person.model_validate_json(person_data)  # возвращаем десериализованный объект Person
+        return Person.model_validate_json(person_data)
 
     async def _put_person_to_cache(self, person: Person):
-        """Сохраняет данные о персоне, используя команду set
+        """
+        Сохраняет данные о персоне, используя команду set.
+
+        Args:
+            person: Объект Person
         """
         # параметры ключа для кэша
         params_to_key = {
@@ -126,24 +162,30 @@ class PersonService:
 
     async def _person_search_from_cache(self, cache_key: str) -> list[Person] | None:
         """
-        Ищет информацию в кеше Redis
+        Ищет информацию в кеше Redis.
 
-        :param cache_key: ключ кеша - `запрос:номер_страницы:число_элементов`
-        :return: возвращаем десериализованный объект List[Person] или None
+        Args:
+            cache_key: Ключ кеша Redis
+
+        Returns:
+            Возвращаем десериализованный объект List[Person] или None
         """
         # Пытаемся получить данные о персоне из кеша, используя команду get
         serialized_search_person_data = await self.redis.get(cache_key)
         if not serialized_search_person_data:
             return None
 
-        logging.info(f"Взято из кэша по ключу: {cache_key}")
+        logging.info('Взято из кэша по ключу: {0}'.format(cache_key))
         # pydantic предоставляет удобное API для создания объекта моделей из json
         return PERSONS_SEARCH_ADAPTER.validate_json(serialized_search_person_data)
 
     async def _put_person_search_to_cache(self, cache_key: str, persons: list[Person]):
-        """Сохраняет результат поиска, используя команду set
-        """
+        """Сохраняет результат поиска, используя команду set.
 
+        Args:
+            cache_key: Ключ-кэш для записи в Redis.
+            persons: Список персон для записи в Redis.
+        """
         await self.redis.set(
             cache_key,
             PERSONS_SEARCH_ADAPTER.dump_json(persons),
@@ -159,5 +201,13 @@ def get_person_service(
     redis: Redis = Depends(get_redis),
     elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> PersonService:
-    """Провайдер для PersonService"""
+    """Провайдер для PersonService.
+
+    Args:
+        redis: DI - соединение с БД Redis.
+        elastic: DI - соединение с БД ElasticSearch.
+
+    Returns:
+        PersonService: Если объект был ранее создан, то вернется он же (singleton).
+    """
     return PersonService(redis, elastic)

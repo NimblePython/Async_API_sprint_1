@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
+"""Модуль реализует сервис для доступа к информации о жанрах."""
+
 import logging
 from functools import lru_cache
 from typing import Optional
-from pydantic import TypeAdapter
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
-
 from fastapi import Depends
+from pydantic import TypeAdapter
 from redis.asyncio import Redis
 
-from src.db.elastic import get_elastic
-from src.db.redis import get_redis, generate_cache_key
-from src.models.genre import Genre
-
 from src.core import config
+from src.db.elastic import get_elastic
+from src.db.redis import generate_cache_key, get_redis
+from src.models.genre import Genre
 
 GENRES_SEARCH_ADAPTER = TypeAdapter(list[Genre])
 GENRES_CACHE_KEY = 'genres::all'
@@ -23,19 +23,34 @@ logger = logging.getLogger(__name__)
 
 # GenreService содержит бизнес-логику по работе с персоналиями.
 class GenreService(object):
+    """Класс сервиса работы с жанрами.
+
+    Обеспечивает доступ к информации о жанрах.
+    """
+
     def __init__(
-            self,
-            redis: Redis,
-            elastic: AsyncElasticsearch
+        self,
+        redis: Redis,
+        elastic: AsyncElasticsearch,
     ):
+        """Конструктор GenreService.
+
+        Args:
+            redis: Ссылка на объект Redis.
+            elastic: Ссылка на объект Elasticsearch.
+        """
         self.redis = redis
         self.elastic = elastic
 
     async def get_by_id(self, genre_id: str) -> Optional[Genre]:
         """Возвращает Жанр по его UUID из ES.
-        Возвращаемый параметр опционален, так как Жанр может отсутствовать в БД
-        """
 
+        Args:
+            genre_id: Идентификатор UUID запрашиваемого жанра
+
+        Returns:
+            Информация о жанре или None, если не найден
+        """
         # Пытаемся получить данные из кеша, потому что оно работает быстрее
         genre = await self._get_genre_from_cache(genre_id)
         if not genre:
@@ -50,6 +65,11 @@ class GenreService(object):
         return genre
 
     async def get_genres(self) -> Optional[list[Genre]]:
+        """Метод получения информации о всех жанрах.
+
+        Returns:
+             Список всех жанров или None, если нет ни одного жанра
+        """
         # Пытаемся получить данные из кеша
         genres = await self._all_genres_from_cache()
         if not genres:
@@ -62,7 +82,13 @@ class GenreService(object):
         return genres
 
     async def _get_genre_from_elastic(self, genre_id: str) -> Optional[Genre]:
-        """ Получает данные о жанре из ElasticSearch
+        """Получает данные о жанре из Elasticsearch, используя команду get.
+
+        Args:
+            genre_id: Идентификатор UUID жанра
+
+        Returns:
+            Жанр или None, если жанр не найден
         """
         try:
             doc = await self.elastic.get(index='genres', id=genre_id)
@@ -71,9 +97,14 @@ class GenreService(object):
         return Genre(**doc['_source'])
 
     async def _get_genre_from_cache(self, genre_id: str) -> Optional[Genre]:
-        """ Получает данные о жанре из кеша Redis, используя команду get
-        """
+        """Получает данные о жанре из кеша Redis, используя команду get.
 
+        Args:
+            genre_id: Идентификатор UUID жанра
+
+        Returns:
+            Жанр (или None, если не найден, но так быть не должно, иначе - ошибка именования кэша)
+        """
         params_to_key = {
             'uuid': genre_id,
         }
@@ -83,13 +114,15 @@ class GenreService(object):
         if not serialized_genre_data:
             return None
 
-        logging.info(f"Взято из кэша по ключу: {cache_key}")
-        return Genre.model_validate_json(serialized_genre_data)  # возвращаем десериализованный объект Genre
+        logging.info('Взято из кэша по ключу: {0}'.format(cache_key))
+        return Genre.model_validate_json(serialized_genre_data)
 
     async def _put_genre_to_cache(self, genre: Genre):
-        """Сохраняет данные о жанре в Redis, используя команду set
-        """
+        """Сохраняет данные о жанре в Redis, используя команду set.
 
+        Args:
+            genre: Объект жанра
+        """
         # подготовка к генерации ключа
         params_to_key = {
             'uuid': genre.uuid,
@@ -103,26 +136,28 @@ class GenreService(object):
         )
 
     async def _all_genres_from_cache(self) -> Optional[list[Genre]]:
-        """ Получает данные о всех жанрах из кеша Redis
+        """Получает данные о всех жанрах из кеша Redis.
 
-        :return: список жанров или None
+        Returns:
+            Список жанров или None
         """
         serialized_genres_data = await self.redis.get(GENRES_CACHE_KEY)
         if not serialized_genres_data:
             return None
 
-        logging.info(f"Взято из кэша по ключу: {GENRES_CACHE_KEY}")
+        logging.info('Взято из кэша по ключу: {0}'.format(GENRES_CACHE_KEY))
         return GENRES_SEARCH_ADAPTER.validate_json(serialized_genres_data)
 
     async def _all_genres_from_elastic(self) -> Optional[list[Genre]]:
-        """ Получает данные о жанре из ElasticSearch
+        """Получает данные о жанре из ElasticSearch.
 
-        :return: список жанров или None
+        Returns:
+            Список жанров или None.
         """
         query = {
             'query': {'match_all': {}},
             'from': 0,
-            'size': 100
+            'size': 100,
         }
 
         try:
@@ -130,12 +165,18 @@ class GenreService(object):
         except NotFoundError:
             return None
 
-        hits = response.get("hits", {}).get("hits", [])
-        genres = [hit["_source"] for hit in hits]
+        hits = response.get('hits', {}).get('hits', [])
+        genres = [Genre(**hit['_source']) for hit in hits]
+
+        logging.debug(genres)
+
         return genres
 
     async def _put_all_genres_to_cache(self, genres: list[Genre]):
-        """Сохраняет данные о всех жанрах в Redis, используя команду set
+        """Сохраняет данные о всех жанрах в Redis, используя команду set.
+
+        Args:
+            genres: Список жанров для вставки в Redis
         """
         await self.redis.set(
             GENRES_CACHE_KEY,
@@ -152,5 +193,13 @@ def get_genre_service(
     redis: Redis = Depends(get_redis),
     elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> GenreService:
-    """Провайдер для GenreService"""
+    """Провайдер для GenreService.
+
+    Args:
+        redis: DI - соединение с БД Redis.
+        elastic: DI - соединение с БД ElasticSearch.
+
+    Returns:
+        GenreService: Сервис для работы с жанрами (singlton)
+    """
     return GenreService(redis, elastic)

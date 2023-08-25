@@ -16,11 +16,11 @@ class Settings(BaseSettings):
 
     REDIS_HOST: str
     REDIS_PORT: int
+      
     CACHE_TIME_LIFE: int  # Время жизни кэша Redis
 
     ES_HOST: str
     ES_PORT: int
-
 
 settings = Settings()  # type: ignore
 

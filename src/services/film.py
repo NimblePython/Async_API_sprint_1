@@ -14,7 +14,7 @@ from redis.asyncio import Redis
 
 from src.core import config
 from src.db.elastic import get_elastic
-from src.db.redis import get_redis, generate_cache_key
+from src.db.redis import generate_cache_key, get_redis
 from src.models.film import Film, FilmDetailed, FilmGenre
 
 FILM_ADAPTER = TypeAdapter(list[Film])
@@ -89,7 +89,7 @@ class FilmService:  # создатели линтера wemake python styleguide
         if not film_data:
             return None
 
-        logging.info(f"Взято из кэша по ключу: {cache_key}")
+        logging.info('Взято из кэша по ключу: {0}'.format(cache_key))
         # pydantic предоставляет удобное API для создания объекта моделей из json
         return FilmDetailed.model_validate_json(film_data)  # возвращаем
     # десериализованный объект Film
@@ -118,7 +118,8 @@ class MultipleFilmsService:
     """Сервис для получения информации о нескольких фильмов из elastic."""
 
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        """Инициализация сервиса.
+        """
+        Инициализация сервиса.
 
         Parameters:
             redis: экземпляр redis'а
@@ -148,7 +149,6 @@ class MultipleFilmsService:
         Returns:
             список фильмов (краткий вариант объекта)
         """
-
         # ключ для кэша задается в формате ключ::значение::ключ::значение и т.д.
         params_to_key = {
             'desc': str(int(desc_order)),
@@ -198,7 +198,6 @@ class MultipleFilmsService:
         Returns:
             список фильмов
         """
-
         # ключ для кэша задается в формате ключ::значение::ключ::значение и т.д.
         params_to_key = {
             'query': query,
@@ -209,16 +208,16 @@ class MultipleFilmsService:
         # создаём ключ для кэша
         page_cache_key = generate_cache_key('movies', params_to_key)
 
-        # запрашиваем ифно в кэше
+        # запрашиваем инфо в кэше
         films_page = await self._get_multiple_films_from_cache(page_cache_key)
-        if not films_page:
+        if films_page:
+            logging.info('Взято из кэша по ключу: {0}'.format(page_cache_key))
+        else:
             films_page = await self._fulltext_search_films_in_elastic(
                 query=query,
                 page_number=page_number,
                 page_size=page_size,
             )
-        else:
-            logging.info(f"Взято из кэша по ключу: {page_cache_key}")
 
         return films_page
 
@@ -333,7 +332,7 @@ class MultipleFilmsService:
         if not films_data:
             return None
 
-        logging.info(f"Взято из кэша по ключу: {page_cache_key}")
+        logging.info('Взято из кэша по ключу: {0}'.format(page_cache_key))
         return FILM_ADAPTER.validate_json(films_data)
 
     # 4.2. сохранение страницы фильмов (отсортированных по популярности) в кэш:

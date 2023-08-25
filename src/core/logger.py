@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-LOG_DEFAULT_HANDLERS = ['console', ]
+LOG_DEFAULT_HANDLERS = [
+    'console',
+]
 
 # В логгере настраивается логгирование uvicorn-сервера.
 # Про логирование в Python можно прочитать в документации 
@@ -12,7 +14,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': LOG_FORMAT
+            'format': LOG_FORMAT,
         },
         'default': {
             '()': 'uvicorn.logging.DefaultFormatter',
@@ -26,7 +28,7 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
@@ -44,7 +46,7 @@ LOGGING = {
     'loggers': {
         '': {
             'handlers': LOG_DEFAULT_HANDLERS,
-            'level': 'INFO',
+            'level': 'DEBUG',
         },
         'uvicorn.error': {
             'level': 'INFO',
@@ -56,7 +58,7 @@ LOGGING = {
         },
     },
     'root': {
-        'level': 'INFO',
+        'level': 'DEBUG',
         'formatter': 'verbose',
         'handlers': LOG_DEFAULT_HANDLERS,
     },

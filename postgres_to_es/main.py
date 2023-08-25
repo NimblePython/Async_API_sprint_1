@@ -1,43 +1,61 @@
-"""Приложение по регулярному методическому просеиванию (скринингу) данных в БД PostgreSQL для
-выявления измененных данных, с целью обновления этих же данных в БД в ElasticSearch (ES)
-ES содержит эту же информацию для обеспечения (предоставления) функции полнотекстного поиска в бэкендеы
+"""ETL. Модуль main.
+
+Приложение по регулярному просеиванию данных в БД PostgreSQL для
+выявления измененных, с целью обновления этих данных в БД в ElasticSearch (ES)
+ES содержит эту же информацию для обеспечения (предоставления) функции полнотекстового поиска.
 """
 
-import psycopg2
-import os
-import extractor
-import logging
 import configparser
-
-from dotenv import load_dotenv, find_dotenv
+import logging
+import os
 from contextlib import closing
-from psycopg2.extras import DictCursor
-from backoff_dec import backoff
 
+import extractor
+import psycopg2
+from backoff_dec import backoff
+from dotenv import find_dotenv, load_dotenv
+from psycopg2.extras import DictCursor
 
 load_dotenv(find_dotenv())
 
-# При запуске считать состояние
-# Генерировать номер подключения сохранить состояние
-# Подключиться к БД
-# Атомарно выполниить:
-# 1. Скачать пачку данных
-# 2. Трансформировать данные
-# 3. Передать ElasticSearch на включение в индекс
-# 4. Пометить выполненное состояние
-# В случае сбоя выполнения пп 1-4 (отсутсвие успешного состояния) повторно выполнить эти действия
-# Перейти к следующей пачке данных, пока есть данные
+#  При запуске считать состояние.
+#  Генерировать номер подключения сохранить состояние.
+#  Подключиться к БД
+#  Атомарно выполнить:
+#  1. Скачать пачку данных
+#  2. Трансформировать данные
+#  3. Передать ElasticSearch на включение в индекс
+#  4. Пометить выполненное состояние
+#  В случае сбоя выполнения пп 1-4 повторно выполнить эти действия.
+#  Перейти к следующей пачке данных, пока есть данные
 
 
 @backoff()
 def query_exec(cursor, query_to_exec):
+    """Отправляет SQL запрос в PostgreSQL.
+
+    Args:
+        cursor: Курсор в БД PostgreSQL
+        query_to_exec: Запрос SQL
+
+    Returns:
+        Возвращает курсор с результатом запроса
+    """
     cursor.execute(query_to_exec)
     return cursor
 
 
 @backoff()
-def connect_to_db(params):
-    return psycopg2.connect(**params, cursor_factory=DictCursor)
+def connect_to_db(dsl):
+    """Соединение с PostgreSQL.
+
+    Args:
+        dsl: Параметры подключения к СУБД PostgreSQL
+
+    Returns:
+        Возвращает соединение с БД PostgreSQL
+    """
+    return psycopg2.connect(**dsl, cursor_factory=DictCursor)
 
 
 if __name__ == '__main__':
@@ -45,13 +63,15 @@ if __name__ == '__main__':
     config.read('settings.ini')
     log_level = config['Log']['log_level']
     level = {
-        "INFO": logging.INFO,
-        "DEBUG": logging.DEBUG,
-        "WARNING": logging.WARNING,
+        'INFO': logging.INFO,
+        'DEBUG': logging.DEBUG,
+        'WARNING': logging.WARNING,
     }
 
-    logging.basicConfig(level=level[log_level],
-                        format='%(asctime)s %(levelname)s %(message)s')
+    logging.basicConfig(
+        level=level[log_level],
+        format='%(asctime)s %(levelname)s %(message)s',
+    )
 
     pg_db = os.environ.get('POSTGRES_DB')
     usr = os.environ.get('POSTGRES_USER')
@@ -69,5 +89,5 @@ if __name__ == '__main__':
             extract = extractor.Extractor(connection, es_dsl)
             extract.postgres_producer()
 
-    except Exception as e:
-        print("%s: %s" % (e.__class__.__name__, e))
+    except Exception as err:
+        logging.error('%s: %s' % (err.__class__.__name__, err))
