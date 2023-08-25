@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     """Класс настроек backend-приложения movies."""
 
     APP_VERSION: str = '1.0.2'
-    APP_VERSION_DETAILS: str = 'Settings class debugged. FastAPI Lifespan (A.L.)'
+    APP_VERSION_DETAILS: str = 'Settings class debugged. FastAPI Lifespan'
 
     PROJECT_NAME: str  # Название проекта. Используется в Swagger-документации
 
@@ -21,6 +21,7 @@ class Settings(BaseSettings):
 
     ES_HOST: str
     ES_PORT: int
+
 
 settings = Settings()  # type: ignore
 
