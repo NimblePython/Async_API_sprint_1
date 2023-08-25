@@ -120,7 +120,7 @@ class Load:
                     },
                     'full_name': {
                         'type': 'text',
-                        ' analyzer': 'ru_en',
+                        'analyzer': 'ru_en',
                     },
                 },
             },
