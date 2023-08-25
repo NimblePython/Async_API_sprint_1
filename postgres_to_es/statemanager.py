@@ -100,8 +100,7 @@ class State:
         try:
             self.storage.save_state(conditions)
         except Exception as err:
-            logging.error('%s: %s' % (err.__class__.__name__, err))
-            logging.error('Значение %s в ключе %s не сохранено' % (new_value, key))
+            logging.exception('Значение %s в ключе %s не сохранено' % (new_value, key))
             # Возвращаем старое значение ключу, так как не удалось сохранить
             if old_value:
                 conditions[key] = old_value
