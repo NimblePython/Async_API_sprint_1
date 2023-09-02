@@ -90,4 +90,4 @@ if __name__ == '__main__':
             extract.postgres_producer()
 
     except Exception as err:
-        logging.error('%s: %s' % (err.__class__.__name__, err))
+        logging.exception('%s: %s' % (err.__class__.__name__, err))

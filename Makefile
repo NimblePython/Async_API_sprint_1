@@ -18,6 +18,9 @@ up:
 down:
 	docker compose -f docker-compose.yml down
 
+inspect_app:
+	docker run -it movies_backend /bin/bash
+
 up.local:
 	docker compose -f docker-compose.dev.yml --env-file .env.local up -d
 
