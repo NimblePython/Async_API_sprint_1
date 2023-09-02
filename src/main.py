@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
-from  contextlib import asynccontextmanager
+from contextlib import asynccontextmanager
 
 import uvicorn
 from elasticsearch import AsyncElasticsearch
