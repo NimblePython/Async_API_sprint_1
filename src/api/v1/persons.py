@@ -48,7 +48,7 @@ class Person(BaseModel):
 # Описываем обработчик для поиска персоны
 @router.get(
     '/search',
-    response_model=list[Person],
+    response_model=list[Person] | None,
     summary='Поиск по имени персонажа',
     description='В поисковом запросе указать имя, кол-во записей на странице и номер страницы',
 )
