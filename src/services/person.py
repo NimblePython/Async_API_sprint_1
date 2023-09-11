@@ -49,7 +49,7 @@ class PersonService:
         query: str,
         page_number: int,
         page_size: int,
-    ) -> list[Person] | None:
+    ) -> list[Person]:
         """Полнотекстовый поиск персоны по имени.
 
         Args:
@@ -82,11 +82,12 @@ class PersonService:
                 },
             )
             persons = [Person(**hit['_source']) for hit in search_results['hits']['hits']]
+            # Сохраняем поиск по персонажу в кеш (даже если поиск не дал результата)
+            await self._put_person_search_to_cache(cache_key, persons)
+
             if not persons:
                 # Если он отсутствует в Elasticsearch, значит, персонажа такого вообще нет в базе
-                return None
-            # Сохраняем поиск по персонажу в кеш
-            await self._put_person_search_to_cache(cache_key, persons)
+                return []
 
         return persons
 
