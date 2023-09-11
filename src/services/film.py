@@ -97,7 +97,7 @@ class FilmService:  # создатели линтера wemake python styleguide
     # 4.1. сохранение фильма в кэш по id:
     async def _put_film_to_cache(self, film: Film):
         # Сохраняем данные о фильме, используя команду set
-        # Выставляем время жизни кеша — 5 минут
+        # Выставляем время жизни кеша — CACHE_TIME_LIFE
         # https://redis.io/commands/set/
         # pydantic позволяет сериализовать модель в json
 
@@ -163,7 +163,6 @@ class MultipleFilmsService:
         # запрашиваем инфо в кэше по ключу
         films_page = await self._get_multiple_films_from_cache(page_cache_key)
         if not films_page:
-            logger.info('No films in cache!')
             # если в кэше нет значения по этому ключу, делаем запрос в es
             films_page = await self._get_multiple_films_from_elastic(
                 desc_order=desc_order,
@@ -172,14 +171,15 @@ class MultipleFilmsService:
                 genre=genre,
                 similar=similar,
             )
-            if not films_page:
-                return None
-
-            # если результат не пуст - сохраняем его в кэш по ключу
+            # Кэшируем результат (пустой результат тоже)
             await self._put_multiple_films_to_cache(
                 page_cache_key=page_cache_key,
                 films=films_page,
             )
+
+            if not films_page:
+                return None
+
         return films_page
 
     async def search_films(
@@ -206,18 +206,19 @@ class MultipleFilmsService:
         }
 
         # создаём ключ для кэша
-        page_cache_key = generate_cache_key('movies', params_to_key)
+        cache_key = generate_cache_key('movies', params_to_key)
 
         # запрашиваем инфо в кэше
-        films_page = await self._get_multiple_films_from_cache(page_cache_key)
-        if films_page:
-            logging.info('Взято из кэша по ключу: {0}'.format(page_cache_key))
-        else:
+        films_page = await self._get_multiple_films_from_cache(cache_key)
+        if not films_page:
             films_page = await self._fulltext_search_films_in_elastic(
                 query=query,
                 page_number=page_number,
                 page_size=page_size,
             )
+
+        # Сохраняем поиск по фильму в кеш (даже если поиск не дал результата)
+        await self._put_multiple_films_to_cache(cache_key, films_page)
 
         return films_page
 
@@ -327,18 +328,19 @@ class MultipleFilmsService:
 
     # 3.2. получение страницы списка фильмов отсортированных по популярности из кэша
     async def _get_multiple_films_from_cache(self, page_cache_key: str):
-
+        logging.info('Поиск фильмов в кэше по ключу: {0}'.format(page_cache_key))
         films_data = await self.redis.get(page_cache_key)
         if not films_data:
+            logging.info('Не найдено в кэш')
             return None
 
-        logging.info('Взято из кэша по ключу: {0}'.format(page_cache_key))
+        logging.info('Взято из кэша')
         return FILM_ADAPTER.validate_json(films_data)
 
     # 4.2. сохранение страницы фильмов (отсортированных по популярности) в кэш:
-    async def _put_multiple_films_to_cache(self, page_cache_key: str, films):
+    async def _put_multiple_films_to_cache(self, cache_key: str, films):
         await self.redis.set(
-            page_cache_key,
+            cache_key,
             FILM_ADAPTER.dump_json(films),
             config.settings.CACHE_TIME_LIFE,
         )
