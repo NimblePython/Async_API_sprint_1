@@ -180,3 +180,36 @@ async def person_films(
 
     logging.debug('Объект для выдачи list[Filmography]:\n{0}'.format(filmography))
     return filmography
+
+
+@router.get(
+    '/',
+    response_model=list[Person],
+    summary='Запрос всех персоналий.',
+    description='Будут выданы все существующие персоны.',
+)
+async def all_persons(
+    person_service: PersonService = Depends(get_person_service),
+) -> list[Person]:
+    """Функция для обработки 'ручки' - api/v1/persons/.
+
+    Возвращает информацию о всех персоналиях (не более 100).
+
+    Args:
+        person_service: Связь с сервисом для доступа к персонам
+
+    Returns:
+        Список персоналий
+
+    Raises:
+        HTTPException: NOT_FOUND - Не найден ни один человек
+    """
+    persons = await person_service.get_persons()
+    if not persons:
+        # Если не найден, отдаём 404 статус
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='no genres in database')
+
+    logging.debug('Объект для выдачи list[Persons]:\n{0}'.format(persons))
+
+    # Ответ клиенту. Трансформация из model.Person в Person 'на лету'
+    return persons

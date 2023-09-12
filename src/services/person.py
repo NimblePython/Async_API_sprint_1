@@ -18,6 +18,7 @@ from src.db.redis import generate_cache_key, get_redis
 from src.models.person import Person
 
 PERSONS_SEARCH_ADAPTER = TypeAdapter(list[Person])
+PERSONS_CACHE_KEY = 'persons::all'
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +114,23 @@ class PersonService:
 
         return person
 
+    async def get_persons(self) -> Optional[list[Person]]:
+        """Метод получения информации о всех персоналиях.
+
+        Returns:
+             Список всех персон или None, если нет ни одной персоны
+        """
+        # Пытаемся получить данные из кеша
+        persons = await self._all_persons_from_cache()
+        if not persons:
+            # Если жанров нет в кеше, то ищем его в Elasticsearch
+            persons = await self._all_persons_from_elastic()
+            if not persons:
+                return None
+            await self._put_all_persons_to_cache(persons)
+
+        return persons
+
     async def _get_person_from_elastic(self, person_id: str) -> Optional[Person]:
         try:
             doc = await self.elastic.get(index='persons', id=person_id)
@@ -189,6 +207,55 @@ class PersonService:
         """
         await self.redis.set(
             cache_key,
+            PERSONS_SEARCH_ADAPTER.dump_json(persons),
+            config.settings.CACHE_TIME_LIFE,
+        )
+
+    async def _all_persons_from_cache(self) -> Optional[list[Person]]:
+        """Получает данные о всех жанрах из кеша Redis.
+
+        Returns:
+            Список жанров или None
+        """
+        serialized_genres_data = await self.redis.get(PERSONS_CACHE_KEY)
+        if not serialized_genres_data:
+            return None
+
+        logging.info('Взято из кэша по ключу: {0}'.format(PERSONS_CACHE_KEY))
+        return PERSONS_SEARCH_ADAPTER.validate_json(serialized_genres_data)
+
+    async def _all_persons_from_elastic(self) -> Optional[list[Person]]:
+        """Получает данные о персонах из ElasticSearch.
+
+        Returns:
+            Список персон или None.
+        """
+        query = {
+            'query': {
+                'match_all': {}
+            },
+        }
+
+        try:
+            response = await self.elastic.search(index='persons', body=query)
+        except NotFoundError:
+            return None
+
+        hits = response.get('hits', {}).get('hits', [])
+        persons = [Person(**hit['_source']) for hit in hits]
+
+        logging.debug(persons)
+
+        return persons
+
+    async def _put_all_persons_to_cache(self, persons: list[Person]):
+        """Сохраняет данные о всех персоналиях в Redis, используя команду set.
+
+        Args:
+            persons: Список жанров для вставки в Redis
+        """
+        await self.redis.set(
+            PERSONS_CACHE_KEY,
             PERSONS_SEARCH_ADAPTER.dump_json(persons),
             config.settings.CACHE_TIME_LIFE,
         )
