@@ -155,9 +155,11 @@ class GenreService(object):
             Список жанров или None.
         """
         query = {
-            'query': {'match_all': {}},
+            'query': {
+                'match_all': {},
+            },
             'from': 0,
-            'size': 100,
+            'size': 10000,
         }
 
         try:
