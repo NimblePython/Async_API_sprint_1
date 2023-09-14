@@ -158,10 +158,10 @@ class MultipleFilmsService:
             'similar': similar,
         }
         # создаём ключ для кэша
-        page_cache_key = generate_cache_key('movies', params_to_key)
+        cache_key = generate_cache_key('movies', params_to_key)
 
         # запрашиваем инфо в кэше по ключу
-        films_page = await self._get_multiple_films_from_cache(page_cache_key)
+        films_page = await self._get_multiple_films_from_cache(cache_key)
         if not films_page:
             # если в кэше нет значения по этому ключу, делаем запрос в es
             films_page = await self._get_multiple_films_from_elastic(
@@ -173,7 +173,7 @@ class MultipleFilmsService:
             )
             # Кэшируем результат (пустой результат тоже)
             await self._put_multiple_films_to_cache(
-                page_cache_key=page_cache_key,
+                cache_key=cache_key,
                 films=films_page,
             )
 
@@ -327,14 +327,13 @@ class MultipleFilmsService:
         return [Film(**hit['_source']) for hit in search_results['hits']['hits']]
 
     # 3.2. получение страницы списка фильмов отсортированных по популярности из кэша
-    async def _get_multiple_films_from_cache(self, page_cache_key: str):
-        logging.info('Поиск фильмов в кэше по ключу: {0}'.format(page_cache_key))
-        films_data = await self.redis.get(page_cache_key)
+    async def _get_multiple_films_from_cache(self, cache_key: str):
+        films_data = await self.redis.get(cache_key)
         if not films_data:
             logging.info('Не найдено в кэш')
             return None
 
-        logging.info('Взято из кэша')
+        logging.info('Взято из кэша по ключу: {0}'.format(cache_key))
         return FILM_ADAPTER.validate_json(films_data)
 
     # 4.2. сохранение страницы фильмов (отсортированных по популярности) в кэш:

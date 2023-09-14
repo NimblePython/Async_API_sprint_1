@@ -232,8 +232,10 @@ class PersonService:
         """
         query = {
             'query': {
-                'match_all': {}
+                'match_all': {},
             },
+            'from': 0,
+            'size': 10000,
         }
 
         try:

@@ -43,5 +43,5 @@ def generate_cache_key(
     volumes = ['{0}::{1}'.format(key, str(params_to_key[key])) for key in sorted_keys]
     cache_key = '{0}::{1}'.format(index, '::'.join(volumes))
 
-    logging.info('Кэш-ключ: {0}'.format(cache_key))
+    # logging.info('Кэш-ключ: {0}'.format(cache_key))
     return cache_key
