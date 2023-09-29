@@ -3,12 +3,10 @@ LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 LOG_DEFAULT_HANDLERS = [
     'console',
 ]
-
 # В логгере настраивается логгирование uvicorn-сервера.
-# Про логирование в Python можно прочитать в документации 
-# https://docs.python.org/3/howto/logging.html 
+# Про логирование в Python можно прочитать в документации
+# https://docs.python.org/3/howto/logging.html
 # https://docs.python.org/3/howto/logging-cookbook.html
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -16,16 +14,15 @@ LOGGING = {
         'verbose': {
             'format': LOG_FORMAT,
         },
-        'fmt': '%(levelprefix)s %(message)s',
-        'use_colors': None,
-    },
-    'access': {
-        '()': 'uvicorn.logging.AccessFormatter',
-        'fmt': "%(levelprefix)s %(client_addr)s - '%(request_line)s' %(status_code)s",
-    },
-    'default': {
+        'default': {
             '()': 'uvicorn.logging.DefaultFormatter',
-
+            'fmt': '%(levelprefix)s %(message)s',
+            'use_colors': None,
+        },
+        'access': {
+            '()': 'uvicorn.logging.AccessFormatter',
+            'fmt': "%(levelprefix)s %(client_addr)s - '%(request_line)s' %(status_code)s",
+        },
     },
     'handlers': {
         'console': {
